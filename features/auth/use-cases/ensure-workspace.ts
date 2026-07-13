@@ -23,11 +23,13 @@ export async function ensureWorkspace(userId: string) {
   const workspaceId = crypto.randomUUID();
   const name = defaultWorkspaceName(user.name);
 
-  await db.insert(workspaces).values({ id: workspaceId, name });
-  await db
-    .update(users)
-    .set({ workspaceId, updatedAt: new Date() })
-    .where(eq(users.id, userId));
+  await db.transaction(async (tx) => {
+    await tx.insert(workspaces).values({ id: workspaceId, name });
+    await tx
+      .update(users)
+      .set({ workspaceId, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  });
 
   return { workspaceId, name };
 }

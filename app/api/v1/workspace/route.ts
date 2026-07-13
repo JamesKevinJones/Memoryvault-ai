@@ -10,7 +10,12 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const body = (await req.json()) as { name?: string };
+  let body: { name?: string };
+  try {
+    body = (await req.json()) as { name?: string };
+  } catch {
+    return Response.json({ error: "invalid json" }, { status: 400 });
+  }
   if (!body.name || body.name.trim().length < 1) {
     return Response.json({ error: "name required" }, { status: 400 });
   }
