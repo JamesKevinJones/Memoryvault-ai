@@ -47,6 +47,8 @@ export function MemoryDetailPanel() {
     );
   }
 
+  const memory = selectedMemory;
+
   async function patchMemory(id: string, body: Record<string, unknown>) {
     const res = await fetch(`/api/v1/memories/${id}`, {
       method: "PATCH",
@@ -64,7 +66,7 @@ export function MemoryDetailPanel() {
     setSaving(true);
     setError(null);
     try {
-      await patchMemory(selectedMemory.id, { title, content, category, importance });
+      await patchMemory(memory.id, { title, content, category, importance });
       setEditing(false);
     } catch {
       setError("Could not save changes.");
@@ -77,7 +79,7 @@ export function MemoryDetailPanel() {
     setSaving(true);
     setError(null);
     try {
-      await patchMemory(selectedMemory.id, { pinned: !selectedMemory.pinned });
+      await patchMemory(memory.id, { pinned: !memory.pinned });
     } catch {
       setError("Could not update pin.");
     } finally {
@@ -90,11 +92,11 @@ export function MemoryDetailPanel() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/memories/${selectedMemory.id}`, {
+      const res = await fetch(`/api/v1/memories/${memory.id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete memory");
-      removeMemory(selectedMemory.id);
+      removeMemory(memory.id);
       setSelectedId(null);
     } catch {
       setError("Could not delete memory.");
