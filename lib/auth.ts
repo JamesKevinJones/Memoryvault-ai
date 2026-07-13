@@ -11,6 +11,11 @@ import {
 import { env } from "@/lib/env";
 import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
 
+/**
+ * JWT sessions (not DB sessions) so Next.js Edge middleware can read auth
+ * without opening a Cockroach/postgres TCP connection (unsupported on Edge).
+ * Adapter still persists users + OAuth accounts in CockroachDB.
+ */
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -24,14 +29,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: env().AUTH_GOOGLE_SECRET,
     }),
   ],
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   pages: { signIn: "/sign-in" },
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.sub = user.id;
         const ws = await ensureWorkspace(user.id);
-        session.user.workspaceId = ws.workspaceId;
+        token.workspaceId = ws.workspaceId;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub ?? "";
+        session.user.workspaceId = (token.workspaceId as string) ?? "";
       }
       return session;
     },

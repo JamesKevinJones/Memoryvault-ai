@@ -101,7 +101,7 @@ describe("PATCH /api/v1/memories/[id]", () => {
 
 describe("memory API unauthorized", () => {
   beforeEach(() => {
-    vi.mocked(auth).mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null as never);
   });
 
   it("GET /api/v1/memories returns 401 when unauthenticated", async () => {
@@ -123,10 +123,14 @@ describe("memory API unauthorized", () => {
 
 describe("memory API handler validation", () => {
   beforeEach(() => {
-    vi.mocked(auth).mockResolvedValue({ user: { id: "user-1" } } as Awaited<
-      ReturnType<typeof auth>
-    >);
-    vi.mocked(ensureWorkspace).mockResolvedValue({ workspaceId: "ws-1" });
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: "user-1", workspaceId: "ws-1" },
+      expires: new Date(Date.now() + 86_400_000).toISOString(),
+    } as never);
+    vi.mocked(ensureWorkspace).mockResolvedValue({
+      workspaceId: "ws-1",
+      name: "My Vault",
+    });
   });
 
   it("handleListMemories returns 400 for invalid query params", async () => {
