@@ -1,10 +1,13 @@
 # Continue here (pause checkpoint)
 
-**Paused:** 2026-07-14  
-**Branch:** `m0-foundations`  
+**Paused:** 2026-07-14 (evening)  
+**Branch:** `m0-foundations` (tracks `origin/m0-foundations`)  
+**Repo:** https://github.com/JamesKevinJones/Memoryvault-ai  
 **Solo contributor:** Jameskevinjones  
 
 Do not start on a different branch unless you intentionally merge first.
+
+**Latest commit:** `f17b718` — JWT sessions (fixes login → kick back to sign-in on Edge middleware)
 
 ---
 
@@ -12,58 +15,55 @@ Do not start on a different branch unless you intentionally merge first.
 
 ### Done
 
-- **M0** — Foundations complete (auth, workspace, shell, health/me/workspace).
-- **M1 Task 1** — Product schema (projects, memories, embeddings, links, tasks, documents, ai_runs, conversations/messages) — commit `6d0b00f` family.
+- **M0** — Foundations: Auth.js + Google OAuth, workspace 1:1, app shell, health/me/workspace APIs, Docker CockroachDB.
+- **Auth fix** — Sessions are **JWT** (users/accounts still in CockroachDB). Required so middleware works on Edge.
+- **M1 Task 1** — Product schema in CRDB (all tables including memories, projects, etc.).
 - **M1 Task 2** — Memory + memory-link repositories.
-- **M1 Task 3** — `/api/v1/memories` CRUD + related + 401 tests (`478b0b2`).
+- **M1 Task 3** — `/api/v1/memories` CRUD + related + tests.
+- **M1 Task 4 (mostly)** — Memory dashboard UI exists: timeline, filters, create form, detail panel (functional, not polished).
+- **`npm run typecheck`** script added; tests/lint/typecheck were green at last checkpoint.
 
-### In progress (checkpointed)
+### Still open for M1
 
-- **M1 Task 4** — Memory timeline UI was mid-implementation when paused.
-  - Files under `features/memory/ui/` (dashboard, filters, timeline, card, detail, create form)
-  - `app/(app)/dashboard/page.tsx` already wires `<MemoryDashboard />`
-  - `@tanstack/react-virtual` added to `package.json`
-  - Committed as a **WIP checkpoint** so nothing is lost
+- **M1 Task 5 wrap-up** — Treat as: verify gates once more (`npm test && npm run lint && npm run typecheck && npm run build`), write M1 completion report for review, **STOP** (do not start M2 unless asked).
+- Optional: small UX hardening on timeline if anything still broken when logged in.
 
-### Not started
+### Explicitly NOT done (later milestones)
 
-- **M1 Task 5** — `typecheck` script, full quality gates (`build` / `lint` / `typecheck` / `test`), M1 completion report, then **STOP for review** (do not start M2).
+- Chat / Bedrock / semantic search / projects / tasks / documents product UIs  
+- **M6 polish** (Linear/Notion-level visuals, motion) — UI looking plain is expected until then  
 
 ---
 
-## Resume in one command set
+## Resume tomorrow
 
-```bash
-cd c:\Kevincodes\memoryvault-ai   # or your clone path
+```powershell
+cd c:\Kevincodes\memoryvault-ai
 git checkout m0-foundations
-git pull                          # if you pushed from another machine
+git pull
 npm install
-docker compose up -d              # if Docker available
-npm run db:push                   # if DB is up
+docker compose up -d
+# wait a few seconds for Cockroach
+docker compose exec cockroach ./cockroach sql --insecure -e "CREATE DATABASE IF NOT EXISTS memoryvault;"
+npm run db:push
 npm run dev
 ```
 
+Open http://localhost:3000 → Google sign-in → Memory timeline dashboard.
+
+`.env` stays local (not in git). Keep your real `AUTH_GOOGLE_*` and `AUTH_SECRET` there. `.env.example` must stay placeholder-only.
+
 Then tell Cursor:
 
-> Resume M1 from docs/CONTINUE.md — finish Task 4 (timeline UI), then Task 5 quality gates, then stop for my review. Use composer-2.5-fast. Architecture is locked.
+> Resume from docs/CONTINUE.md — finish M1 Task 5 quality gates + completion report, then STOP for my review. Architecture locked. Prefer composer-2.5-fast.
 
-Plan file: `docs/superpowers/plans/2026-07-14-m1-memory-crud.md`  
-Local SDD scratch (gitignored): `.superpowers/sdd/progress.md`
-
----
-
-## View the UI now
-
-1. Ensure `.env` exists (from `.env.example`) with Google OAuth + `AUTH_SECRET`.
-2. Prefer DB up (`docker compose up -d` + `db:push`) so signed-in dashboard can load memories.
-3. `npm run dev` → http://localhost:3000  
-4. Without OAuth/DB you can still inspect the **sign-in** shell; dashboard needs a session.
+Plan: `docs/superpowers/plans/2026-07-14-m1-memory-crud.md`
 
 ---
 
 ## Rules still in force
 
-- Architecture doc locked — no redesign.
+- Architecture doc locked — no redesign without asking.
 - One milestone at a time; stop after M1 for review.
-- Quality gates before marking M1 complete.
-- Hot path / Orchestrator rules unchanged for later milestones.
+- Functionality before polish; polish is M6 unless you ask otherwise.
+- Quality gates before claiming a milestone complete.
