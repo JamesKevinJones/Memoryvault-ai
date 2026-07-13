@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   createMemoryBodySchema,
   listMemoriesQuerySchema,
@@ -6,15 +6,15 @@ import {
   updateMemoryBodySchema,
 } from "@/features/memory/api/memory-schemas";
 import { parseMemoryListCursor } from "@/repositories/memories";
+import { auth } from "@/lib/auth";
+import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
 
-vi.mock("@/features/memory/api/memory-handlers", () => ({
-  handleCreateMemory: vi.fn(),
-  handleListMemories: vi.fn(),
-  handleGetMemory: vi.fn(),
-  handleUpdateMemory: vi.fn(),
-  handleDeleteMemory: vi.fn(),
-  handleListRelatedMemories: vi.fn(),
-  toResponse: vi.fn(),
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn(),
+}));
+
+vi.mock("@/features/auth/use-cases/ensure-workspace", () => ({
+  ensureWorkspace: vi.fn(),
 }));
 
 describe("memory API validation", () => {
@@ -96,5 +96,50 @@ describe("PATCH /api/v1/memories/[id]", () => {
     const res = await PATCH(req, { params: Promise.resolve({ id: "mem-1" }) });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "invalid json" });
+  });
+});
+
+describe("memory API unauthorized", () => {
+  beforeEach(() => {
+    vi.mocked(auth).mockResolvedValue(null);
+  });
+
+  it("GET /api/v1/memories returns 401 when unauthenticated", async () => {
+    const { GET } = await import("@/app/api/v1/memories/route");
+    const req = new Request("http://localhost/api/v1/memories");
+    const res = await GET(req);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("GET /api/v1/memories/[id] returns 401 when unauthenticated", async () => {
+    const { GET } = await import("@/app/api/v1/memories/[id]/route");
+    const req = new Request("http://localhost/api/v1/memories/mem-1");
+    const res = await GET(req, { params: Promise.resolve({ id: "mem-1" }) });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+  });
+});
+
+describe("memory API handler validation", () => {
+  beforeEach(() => {
+    vi.mocked(auth).mockResolvedValue({ user: { id: "user-1" } } as Awaited<
+      ReturnType<typeof auth>
+    >);
+    vi.mocked(ensureWorkspace).mockResolvedValue({ workspaceId: "ws-1" });
+  });
+
+  it("handleListMemories returns 400 for invalid query params", async () => {
+    const { handleListMemories } = await import(
+      "@/features/memory/api/memory-handlers"
+    );
+    const result = await handleListMemories(
+      new URLSearchParams({ category: "invalid" }),
+    );
+    expect(result).toEqual({
+      ok: false,
+      status: 400,
+      body: { error: "validation failed" },
+    });
   });
 });
