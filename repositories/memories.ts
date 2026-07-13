@@ -22,6 +22,13 @@ export type Memory = typeof memories.$inferSelect;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
+export function parseMemoryListCursor(cursor?: string): Date | undefined {
+  if (!cursor) return undefined;
+  const date = new Date(cursor);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date;
+}
+
 export type ResolvedMemoryListFilters = {
   workspaceId: string;
   excludeArchived: true;
@@ -53,7 +60,7 @@ export function resolveMemoryListFilters(
     minImportance: filters.minImportance,
     pinned: filters.pinned,
     keywordPattern: keyword ? `%${keyword}%` : undefined,
-    cursorDate: filters.cursor ? new Date(filters.cursor) : undefined,
+    cursorDate: parseMemoryListCursor(filters.cursor),
     limit,
   };
 }

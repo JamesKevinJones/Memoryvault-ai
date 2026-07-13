@@ -1,0 +1,11 @@
+import {
+  handleListRelatedMemories,
+  toResponse,
+} from "@/features/memory/api/memory-handlers";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(_req: Request, context: RouteContext) {
+  const { id } = await context.params;
+  return toResponse(await handleListRelatedMemories(id));
+}

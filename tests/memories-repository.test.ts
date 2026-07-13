@@ -48,6 +48,14 @@ describe("resolveMemoryListFilters", () => {
     ).toBe(100);
   });
 
+  it("ignores invalid cursor ISO", () => {
+    const resolved = resolveMemoryListFilters({
+      workspaceId: "ws-1",
+      cursor: "not-a-date",
+    });
+    expect(resolved.cursorDate).toBeUndefined();
+  });
+
   it("parses cursor for keyset pagination", () => {
     const resolved = resolveMemoryListFilters({
       workspaceId: "ws-1",
