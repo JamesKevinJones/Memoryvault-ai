@@ -11,6 +11,7 @@ import { getMemoryUseCase } from "@/features/memory/use-cases/get-memory";
 import { listMemoriesUseCase } from "@/features/memory/use-cases/list-memories";
 import { listRelatedMemoriesUseCase } from "@/features/memory/use-cases/list-related-memories";
 import { updateMemoryUseCase } from "@/features/memory/use-cases/update-memory";
+import { embedMemoryForUser } from "@/features/memory/use-cases/embed-memory";
 
 export {
   createMemoryBodySchema,
@@ -28,6 +29,16 @@ async function requireWorkspaceId(): Promise<string | null> {
   if (!session?.user?.id) return null;
   const { workspaceId } = await ensureWorkspace(session.user.id);
   return workspaceId;
+}
+
+async function requireSession(): Promise<{
+  userId: string;
+  workspaceId: string;
+} | null> {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  const { workspaceId } = await ensureWorkspace(session.user.id);
+  return { userId: session.user.id, workspaceId };
 }
 
 function validationError(): HandlerResult {
@@ -65,16 +76,29 @@ export async function handleListMemories(
 }
 
 export async function handleCreateMemory(body: unknown): Promise<HandlerResult> {
-  const workspaceId = await requireWorkspaceId();
-  if (!workspaceId) return unauthorized();
+  const ctx = await requireSession();
+  if (!ctx) return unauthorized();
 
   const parsed = createMemoryBodySchema.safeParse(body);
   if (!parsed.success) return validationError();
 
   const memory = await createMemoryUseCase({
-    workspaceId,
+    workspaceId: ctx.workspaceId,
     ...parsed.data,
   });
+
+  try {
+    await embedMemoryForUser({
+      workspaceId: ctx.workspaceId,
+      userId: ctx.userId,
+      memoryId: memory.id,
+      title: memory.title,
+      content: memory.content,
+      projectId: memory.projectId,
+    });
+  } catch {
+    // Memory saved; embedding failure recorded via ai_runs in orchestrator.
+  }
 
   return { ok: true, status: 201, body: { memory } };
 }
@@ -93,8 +117,8 @@ export async function handleUpdateMemory(
   id: string,
   body: unknown,
 ): Promise<HandlerResult> {
-  const workspaceId = await requireWorkspaceId();
-  if (!workspaceId) return unauthorized();
+  const ctx = await requireSession();
+  if (!ctx) return unauthorized();
 
   const parsed = updateMemoryBodySchema.safeParse(body);
   if (!parsed.success) return validationError();
@@ -107,8 +131,23 @@ export async function handleUpdateMemory(
       : {}),
   };
 
-  const memory = await updateMemoryUseCase(workspaceId, id, patch);
+  const memory = await updateMemoryUseCase(ctx.workspaceId, id, patch);
   if (!memory) return notFound();
+
+  if (fields.title !== undefined || fields.content !== undefined) {
+    try {
+      await embedMemoryForUser({
+        workspaceId: ctx.workspaceId,
+        userId: ctx.userId,
+        memoryId: memory.id,
+        title: memory.title,
+        content: memory.content,
+        projectId: memory.projectId,
+      });
+    } catch {
+      // Memory updated; embedding may be stale until retry.
+    }
+  }
 
   return { ok: true, status: 200, body: { memory } };
 }

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",
+    "@aws-sdk/client-bedrock-runtime": "^3.1086.0",
     "@base-ui/react": "^1.6.0",
     "@tanstack/react-virtual": "^3.14.6",
     "class-variance-authority": "^0.7.1",

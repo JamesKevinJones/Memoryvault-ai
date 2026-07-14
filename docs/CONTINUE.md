@@ -6,11 +6,11 @@
 
 ---
 
-## Status: M1 complete — awaiting your review
+## Status: M2 complete — awaiting your review
 
-**Report:** [docs/superpowers/reports/2026-07-14-m1-memory-crud-complete.md](superpowers/reports/2026-07-14-m1-memory-crud-complete.md)
+**Report:** [docs/superpowers/reports/2026-07-14-m2-orchestrator-vectors-complete.md](superpowers/reports/2026-07-14-m2-orchestrator-vectors-complete.md)
 
-Do **not** start M2 until you approve.
+Do **not** start M3 until you approve.
 
 ---
 
@@ -31,15 +31,23 @@ Open http://localhost:3000 → Google sign-in → **Memory timeline** dashboard.
 
 `.env` is local only (never commit). `.env.example` stays placeholder-only.
 
+### M2 env additions
+
+```env
+AWS_REGION=us-east-1
+BEDROCK_EMBED_MODEL_ID=amazon.titan-embed-text-v2:0
+BEDROCK_EMBED_DIMENSIONS=1024
+```
+
+Plus AWS credentials (default SDK chain) with Bedrock Titan Embed access in your region.
+
 ---
 
-## When ready for M2
+## When ready for M3
 
 Tell Cursor:
 
-> Start M2 per architecture spec — Orchestrator + Bedrock + vector search. Architecture locked. One milestone only; stop for review when done.
-
-Plan will be written for M2 before implementation (same process as M1).
+> Start M3 per architecture spec — chat hot path + streaming. Architecture locked. One milestone only; stop for review when done.
 
 ---
 

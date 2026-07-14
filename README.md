@@ -30,7 +30,8 @@ Your vault is the product. Chat is just one way in.
 |-----------|--------|
 | **M0 — Foundations** | ✅ Complete — Auth.js (Google), workspace 1:1, app shell, health/me/workspace APIs |
 | **M1 — Memory CRUD** | ✅ Complete — schema, repos, `/api/v1/memories`, timeline dashboard (create/browse/edit/delete) |
-| **M2 — Orchestrator + vectors** | Planned — Bedrock embed/retrieve, semantic search |
+| **M2 — Orchestrator + vectors** | ✅ Complete — Bedrock embed/retrieve, `/api/v1/search`, `ai_runs`, embed on memory CRUD |
+| **M3 — Chat hot path** | Planned — streaming chat, citations, cold enqueue stub |
 
 Architecture (locked): [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md](docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md)
 
@@ -40,7 +41,7 @@ Architecture (locked): [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.
 
 - **Frontend:** Next.js 15 · React 19 · TypeScript · Tailwind · shadcn/ui  
 - **Backend:** Route Handlers · Drizzle ORM · CockroachDB  
-- **AI (upcoming):** AWS Bedrock · LangChain · thin AI Orchestrator  
+- **AI:** AWS Bedrock (Titan embeddings) · thin AI Orchestrator
 - **Auth:** Auth.js + Google OAuth  
 
 ---
@@ -81,6 +82,11 @@ cp .env.example .env
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google Cloud Console |
 | `AUTH_URL` | `http://localhost:3000` |
+| `AWS_REGION` | e.g. `us-east-1` (Bedrock region) |
+| `BEDROCK_EMBED_MODEL_ID` | Default `amazon.titan-embed-text-v2:0` |
+| `BEDROCK_EMBED_DIMENSIONS` | Default `1024` |
+
+AWS credentials via the default SDK chain (env vars or `~/.aws/credentials`). Enable Titan Embed in Bedrock for your region.
 
 **OAuth redirect URI:** `http://localhost:3000/api/auth/callback/google`
 
@@ -118,19 +124,19 @@ curl http://localhost:3000/api/v1/health
 
 ## Project shape
 
-Feature-first Clean Architecture: `features/*` · `repositories/` · `db/` · `ai/` (Orchestrator coming in M2) · thin `app/` shell.
+Feature-first Clean Architecture: `features/*` · `repositories/` · `db/` · `ai/` (Orchestrator) · thin `app/` shell.
 
 APIs live under `/api/v1/*` (Auth.js at `/api/auth/[...nextauth]`).
 
-### Memory CRUD (M1)
+### Memory + search (M1 + M2)
 
 After sign-in, open **Dashboard** (`/dashboard`):
 
-- **Add memory** — title, content, category, importance
-- **Filter** — keyword search, category, minimum importance
+- **Add memory** — title, content, category, importance (auto-embedded via Bedrock)
+- **Filter** — semantic search when typing a query; category/importance for browse mode
 - **Detail panel** — view, edit, pin, delete
 
-API: `GET/POST /api/v1/memories`, `GET/PATCH/DELETE /api/v1/memories/:id`, `GET .../related`
+API: `GET/POST /api/v1/memories`, `GET/PATCH/DELETE /api/v1/memories/:id`, `GET .../related`, `GET|POST /api/v1/search`, `GET /api/v1/ops/metrics`
 
 ---
 

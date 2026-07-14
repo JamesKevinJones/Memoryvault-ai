@@ -49,8 +49,48 @@ const MemoryDashboardContext =
 async function fetchMemories(
   filters: MemoryFiltersState,
 ): Promise<MemoryListResponse> {
+  if (filters.q.trim()) {
+    const params = new URLSearchParams({ q: filters.q.trim(), limit: "50" });
+    if (filters.category) params.set("category", filters.category);
+    const res = await fetch(`/api/v1/search?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to search memories");
+    const data = (await res.json()) as {
+      items: Array<{
+        memoryId: string;
+        title: string;
+        content: string;
+        category: string;
+        importance: number;
+        projectId: string | null;
+        score: number;
+      }>;
+    };
+    const now = new Date();
+    return {
+      items: data.items.map((hit) => ({
+        id: hit.memoryId,
+        workspaceId: "",
+        projectId: hit.projectId,
+        category: hit.category,
+        title: hit.title,
+        content: hit.content,
+        summary: null,
+        importance: hit.importance,
+        pinned: false,
+        sourceConversationId: null,
+        sourceMessageId: null,
+        sourceDocumentId: null,
+        sourceTaskId: null,
+        archivedAt: null,
+        createdAt: now,
+        updatedAt: now,
+        lastAccessedAt: null,
+      })),
+      nextCursor: null,
+    };
+  }
+
   const params = new URLSearchParams();
-  if (filters.q) params.set("q", filters.q);
   if (filters.category) params.set("category", filters.category);
   if (filters.importance !== undefined) {
     params.set("importance", String(filters.importance));

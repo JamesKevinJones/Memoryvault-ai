@@ -49,20 +49,6 @@ export const memories = pgTable(
   ],
 );
 
-export const embeddings = pgTable("embeddings", {
-  id: text("id").primaryKey(),
-  memoryId: text("memory_id")
-    .notNull()
-    .unique()
-    .references(() => memories.id, { onDelete: "cascade" }),
-  modelId: text("model_id").notNull(),
-  dimensions: integer("dimensions").notNull(),
-  vector: text("vector"),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
 export const memoryLinks = pgTable(
   "memory_links",
   {
