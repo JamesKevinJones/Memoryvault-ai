@@ -20,7 +20,7 @@
 
 | Gate | Result |
 |------|--------|
-| `npm test` | ✅ (see final run) |
+| `npm test` | ✅ 52 passed |
 | `npm run lint` | ✅ |
 | `npm run typecheck` | ✅ |
 | `npm run build` | ✅ |

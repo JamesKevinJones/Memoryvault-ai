@@ -2,6 +2,7 @@
 
 import { Pin } from "lucide-react";
 import type { Memory } from "@/repositories/memories";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -29,32 +30,37 @@ export function MemoryCard({ memory, selected, onSelect }: MemoryCardProps) {
       type="button"
       onClick={() => onSelect(memory)}
       className={cn(
-        "w-full rounded-xl border bg-card p-4 text-left transition-all duration-200",
+        "w-full rounded-2xl border bg-card p-4 text-left shadow-xs transition-all duration-200",
         selected
-          ? "border-foreground/30 ring-1 ring-foreground/10"
-          : "border-border hover:border-foreground/20 hover:bg-muted/30",
+          ? "border-primary/40 ring-1 ring-primary/15"
+          : "border-border hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-md",
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex items-center gap-2">
             {memory.pinned && (
-              <Pin className="size-3.5 shrink-0 fill-current text-muted-foreground" />
+              <Pin className="size-3.5 shrink-0 fill-current text-primary" />
             )}
-            <h3 className="truncate font-medium text-card-foreground">
+            <h3 className="truncate text-[15px] font-medium text-card-foreground">
               {memory.title}
             </h3>
           </div>
-          <p className="line-clamp-2 text-sm text-muted-foreground">{preview}</p>
+          <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+            {preview}
+          </p>
         </div>
-        <span className="shrink-0 rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+        <Badge variant="accent" className="shrink-0">
           {CATEGORY_LABELS[memory.category] ?? memory.category}
-        </span>
+        </Badge>
       </div>
-      <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="mt-3 flex items-center gap-3 text-caption text-muted-foreground">
         <span>{new Date(memory.createdAt).toLocaleDateString()}</span>
         {memory.importance > 0 && (
-          <span>Importance {memory.importance}</span>
+          <>
+            <span className="text-border">·</span>
+            <span>Importance {memory.importance}</span>
+          </>
         )}
       </div>
     </button>

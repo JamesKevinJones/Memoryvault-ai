@@ -1,13 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pin, Trash2 } from "lucide-react";
+import { Inbox, Link2, Pencil, Pin, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
+import { Input, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { MEMORY_CATEGORIES } from "@/features/memory/types";
 import { useMemoryDashboard } from "@/features/memory/ui/memory-timeline";
-
-const inputClass =
-  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+import type { Memory } from "@/repositories/memories";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Tooltip } from "@/components/ui/tooltip";
 
 const CATEGORY_LABELS: Record<string, string> = {
   preference: "Preference",
@@ -16,6 +26,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   task_signal: "Task signal",
   project_info: "Project info",
 };
+
+const categoryItems = MEMORY_CATEGORIES.map((value) => ({
+  value,
+  label: CATEGORY_LABELS[value],
+}));
 
 export function MemoryDetailPanel() {
   const { selectedMemory, upsertMemory, removeMemory, setSelectedId } =
@@ -28,6 +43,8 @@ export function MemoryDetailPanel() {
   const [importance, setImportance] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [related, setRelated] = useState<Memory[]>([]);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!selectedMemory) return;
@@ -39,11 +56,33 @@ export function MemoryDetailPanel() {
     setError(null);
   }, [selectedMemory]);
 
+  useEffect(() => {
+    if (!selectedMemory) {
+      setRelated([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/v1/memories/${selectedMemory.id}/related`)
+      .then((res) => (res.ok ? res.json() : { items: [] }))
+      .then((data: { items?: Memory[] }) => {
+        if (!cancelled) setRelated(data.items ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setRelated([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMemory]);
+
   if (!selectedMemory) {
     return (
-      <aside className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
-        Select a memory to view details.
-      </aside>
+      <EmptyState
+        icon={Inbox}
+        title="No memory selected"
+        description="Choose a memory from the timeline to see its details."
+        className="h-fit"
+      />
     );
   }
 
@@ -88,7 +127,6 @@ export function MemoryDetailPanel() {
   }
 
   async function handleDelete() {
-    if (!window.confirm("Delete this memory?")) return;
     setSaving(true);
     setError(null);
     try {
@@ -98,6 +136,7 @@ export function MemoryDetailPanel() {
       if (!res.ok) throw new Error("Failed to delete memory");
       removeMemory(memory.id);
       setSelectedId(null);
+      setDeleteOpen(false);
     } catch {
       setError("Could not delete memory.");
     } finally {
@@ -106,111 +145,180 @@ export function MemoryDetailPanel() {
   }
 
   return (
-    <aside className="rounded-xl border border-border bg-card p-5 shadow-sm">
+    <Card padding="lg" className="h-fit">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-caption font-medium tracking-wide text-muted-foreground uppercase">
             {CATEGORY_LABELS[selectedMemory.category] ?? selectedMemory.category}
           </p>
           {!editing ? (
-            <h2 className="font-heading text-xl font-semibold text-card-foreground">
-              {selectedMemory.title}
-            </h2>
+            <CardTitle className="mt-1 text-xl">{selectedMemory.title}</CardTitle>
           ) : null}
         </div>
         <div className="flex gap-1">
-          <Button
-            type="button"
-            variant={selectedMemory.pinned ? "secondary" : "outline"}
-            size="icon-sm"
-            onClick={() => void handleTogglePin()}
-            disabled={saving}
-            aria-label={selectedMemory.pinned ? "Unpin memory" : "Pin memory"}
-          >
-            <Pin className={selectedMemory.pinned ? "fill-current" : ""} />
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon-sm"
-            onClick={() => void handleDelete()}
-            disabled={saving}
-            aria-label="Delete memory"
-          >
-            <Trash2 />
-          </Button>
+          <Tooltip content={selectedMemory.pinned ? "Unpin" : "Pin"}>
+            <Button
+              type="button"
+              variant={selectedMemory.pinned ? "secondary" : "outline"}
+              size="icon-sm"
+              onClick={() => void handleTogglePin()}
+              disabled={saving}
+              aria-label={selectedMemory.pinned ? "Unpin memory" : "Pin memory"}
+            >
+              <Pin className={selectedMemory.pinned ? "fill-current" : ""} />
+            </Button>
+          </Tooltip>
+          {!editing && (
+            <Tooltip content="Edit">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                onClick={() => setEditing(true)}
+                aria-label="Edit memory"
+              >
+                <Pencil />
+              </Button>
+            </Tooltip>
+          )}
+          <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <Tooltip content="Delete">
+              <DialogTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon-sm"
+                    disabled={saving}
+                    aria-label="Delete memory"
+                  >
+                    <Trash2 />
+                  </Button>
+                }
+              />
+            </Tooltip>
+            <DialogContent size="sm">
+              <DialogTitle className="text-heading font-medium">
+                Delete this memory?
+              </DialogTitle>
+              <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
+                This action can&apos;t be undone. &ldquo;{memory.title}&rdquo; will be
+                permanently removed from your vault.
+              </DialogDescription>
+              <div className="mt-5 flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={() => setDeleteOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={saving}
+                  onClick={() => void handleDelete()}
+                >
+                  {saving ? "Deleting…" : "Delete"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
       {editing ? (
         <form onSubmit={handleSave} className="space-y-3">
-          <input
-            required
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className={inputClass}
-          />
-          <textarea
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} required />
+          <Textarea
             required
             rows={8}
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            className={inputClass}
           />
           <div className="grid gap-3 sm:grid-cols-2">
-            <select
+            <Select
+              items={categoryItems}
               value={category}
-              onChange={(event) =>
-                setCategory(event.target.value as (typeof MEMORY_CATEGORIES)[number])
+              onValueChange={(value) =>
+                setCategory(value as (typeof MEMORY_CATEGORIES)[number])
               }
-              className={inputClass}
-            >
-              {MEMORY_CATEGORIES.map((value) => (
-                <option key={value} value={value}>
-                  {CATEGORY_LABELS[value]}
-                </option>
-              ))}
-            </select>
-            <input
+              aria-label="Category"
+            />
+            <Input
               type="number"
               min={0}
               max={100}
               value={importance}
               onChange={(event) => setImportance(Number(event.target.value))}
-              className={inputClass}
             />
           </div>
           <div className="flex gap-2">
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Save"}
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setEditing(false)}
-            >
+            <Button type="button" variant="ghost" onClick={() => setEditing(false)}>
               Cancel
             </Button>
           </div>
         </form>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
             {selectedMemory.content}
           </p>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              Updated {new Date(selectedMemory.updatedAt).toLocaleString()}
-            </span>
-            <span>Importance {selectedMemory.importance}</span>
+
+          <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/50 p-3 text-caption">
+            <div>
+              <p className="text-muted-foreground">Importance</p>
+              <p className="mt-0.5 font-medium text-foreground">
+                {selectedMemory.importance}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Source</p>
+              <p className="mt-0.5 font-medium text-foreground">
+                {selectedMemory.sourceConversationId
+                  ? "Chat extraction"
+                  : "Manual entry"}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Created</p>
+              <p className="mt-0.5 font-medium text-foreground">
+                {new Date(selectedMemory.createdAt).toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Updated</p>
+              <p className="mt-0.5 font-medium text-foreground">
+                {new Date(selectedMemory.updatedAt).toLocaleString()}
+              </p>
+            </div>
           </div>
-          <Button type="button" variant="outline" onClick={() => setEditing(true)}>
-            Edit
-          </Button>
+
+          <div>
+            <p className="mb-2 flex items-center gap-1.5 text-caption font-medium text-muted-foreground">
+              <Link2 className="size-3.5" />
+              Related memories {related.length > 0 && `(${related.length})`}
+            </p>
+            {related.length === 0 ? (
+              <p className="text-caption text-muted-foreground">
+                No related memories linked yet.
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {related.map((item) => (
+                  <li
+                    key={item.id}
+                    className="truncate rounded-lg bg-muted/40 px-2.5 py-1.5 text-sm text-foreground"
+                  >
+                    {item.title}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 
       {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
-    </aside>
+    </Card>
   );
 }

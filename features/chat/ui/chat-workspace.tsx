@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { LayoutDashboard, Plus, Send, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { cn } from "@/lib/utils";
 
 export type ChatCitation = {
   memoryId: string;
@@ -20,7 +22,7 @@ type ChatMessage = {
 };
 
 const inputClass =
-  "w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+  "w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/15";
 
 function parseSseChunk(buffer: string): {
   events: Array<{ event: string; data: string }>;
@@ -41,6 +43,23 @@ function parseSseChunk(buffer: string): {
   return { events, rest: parts[parts.length - 1] ?? "" };
 }
 
+function RailSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-b border-border py-4 first:pt-0 last:border-0 last:pb-0">
+      <p className="mb-3 text-caption font-medium tracking-wide text-muted-foreground uppercase">
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
 export function ChatWorkspace({ projectId }: { projectId?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -53,6 +72,11 @@ export function ChatWorkspace({ projectId }: { projectId?: string }) {
   >([]);
   const [pollingExtraction, setPollingExtraction] = useState(false);
   const assistantIdRef = useRef<string | null>(null);
+  const scrollAnchorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages]);
 
   async function pollExtractedMemories(activeConversationId: string) {
     setPollingExtraction(true);
@@ -201,36 +225,47 @@ export function ChatWorkspace({ projectId }: { projectId?: string }) {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="flex min-h-[60vh] flex-col rounded-xl border border-border bg-card">
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <Card padding="none" className="flex min-h-[65vh] flex-col overflow-hidden">
+          <div className="flex-1 space-y-5 overflow-y-auto p-5">
             {messages.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Ask anything — relevant memories are retrieved automatically.
-              </p>
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-accent">
+                  <Sparkles className="size-4.5 text-accent-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Ask anything — relevant memories are retrieved automatically.
+                </p>
+              </div>
             ) : (
               messages.map((message) => (
                 <div
                   key={message.id}
-                  className={
-                    message.role === "user"
-                      ? "ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
-                      : "max-w-[90%] rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground"
-                  }
+                  className={cn("flex flex-col gap-1", message.role === "user" && "items-end")}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <span className="px-1 text-caption text-muted-foreground">
+                    {message.role === "user" ? "You" : "MemoryVault"}
+                  </span>
+                  <div
+                    className={cn(
+                      "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed",
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground",
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap">
+                      {message.content || (streaming ? "…" : "")}
+                    </p>
+                  </div>
                 </div>
               ))
             )}
+            <div ref={scrollAnchorRef} />
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="border-t border-border p-4"
-          >
-            {error && (
-              <p className="mb-2 text-xs text-destructive">{error}</p>
-            )}
+          <form onSubmit={handleSubmit} className="border-t border-border p-4">
+            {error && <p className="mb-2 text-caption text-destructive">{error}</p>}
             <div className="flex items-end gap-2">
               <textarea
                 className={inputClass}
@@ -246,69 +281,83 @@ export function ChatWorkspace({ projectId }: { projectId?: string }) {
               </Button>
             </div>
           </form>
-        </section>
+        </Card>
 
-        <aside className="rounded-xl border border-border bg-card p-4">
-          <h2 className="font-heading text-lg font-semibold text-foreground">
-            Memory context
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Sources cited for the latest response.
-          </p>
-          <ul className="mt-4 space-y-3">
-            {citations.length === 0 ? (
-              <li className="text-sm text-muted-foreground">
-                {streaming ? "Retrieving…" : "No citations yet."}
-              </li>
-            ) : (
-              citations.map((citation) => (
-                <li
-                  key={citation.memoryId}
-                  className="rounded-lg border border-border bg-muted/20 px-3 py-2"
-                >
-                  <p className="text-sm font-medium text-foreground">
-                    {citation.title}
-                  </p>
-                  {citation.score !== undefined && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      relevance {(citation.score * 100).toFixed(0)}%
+        <Card padding="lg" className="h-fit">
+          <RailSection title="Sources">
+            <ul className="space-y-2">
+              {citations.length === 0 ? (
+                <li className="text-sm text-muted-foreground">
+                  {streaming ? "Retrieving…" : "No citations yet."}
+                </li>
+              ) : (
+                citations.map((citation) => (
+                  <li
+                    key={citation.memoryId}
+                    className="rounded-lg bg-muted/40 px-2.5 py-2"
+                  >
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {citation.title}
                     </p>
-                  )}
-                </li>
-              ))
-            )}
-          </ul>
+                    {citation.score !== undefined && (
+                      <p className="mt-0.5 text-caption text-muted-foreground">
+                        relevance {(citation.score * 100).toFixed(0)}%
+                      </p>
+                    )}
+                  </li>
+                ))
+              )}
+            </ul>
+          </RailSection>
 
-          <h3 className="mt-8 font-heading text-sm font-semibold text-foreground">
-            Distilled from chat
-          </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Memories extracted after the cold path runs.
-          </p>
-          <ul className="mt-3 space-y-3">
-            {extractedMemories.length === 0 ? (
-              <li className="text-sm text-muted-foreground">
-                {pollingExtraction
-                  ? "Extracting memories…"
-                  : "No extracted memories yet."}
-              </li>
-            ) : (
-              extractedMemories.map((memory) => (
-                <li
-                  key={memory.id}
-                  className="rounded-lg border border-border bg-muted/20 px-3 py-2"
-                >
-                  <p className="text-sm font-medium text-foreground">
-                    {memory.title}
-                  </p>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {memory.content}
-                  </p>
+          <RailSection title="Related knowledge">
+            <ul className="space-y-2">
+              {extractedMemories.length === 0 ? (
+                <li className="text-sm text-muted-foreground">
+                  {pollingExtraction
+                    ? "Extracting memories…"
+                    : "New memories from this chat will appear here."}
                 </li>
-              ))
-            )}
-          </ul>
-        </aside>
+              ) : (
+                extractedMemories.map((memory) => (
+                  <li key={memory.id} className="rounded-lg bg-muted/40 px-2.5 py-2">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {memory.title}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-caption text-muted-foreground">
+                      {memory.content}
+                    </p>
+                  </li>
+                ))
+              )}
+            </ul>
+          </RailSection>
+
+          <RailSection title="Suggested actions">
+            <div className="flex flex-col gap-1">
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-foreground transition-colors duration-150 hover:bg-muted"
+              >
+                <LayoutDashboard className="size-3.5 text-muted-foreground" />
+                Open vault dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setMessages([]);
+                  setConversationId(null);
+                  setCitations([]);
+                  setExtractedMemories([]);
+                }}
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-foreground transition-colors duration-150 hover:bg-muted"
+              >
+                <Plus className="size-3.5 text-muted-foreground" />
+                Start a new conversation
+              </button>
+            </div>
+          </RailSection>
+        </Card>
       </div>
     </div>
   );

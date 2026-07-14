@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
+import { Input, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { MEMORY_CATEGORIES } from "@/features/memory/types";
 import { useMemoryDashboard } from "@/features/memory/ui/memory-timeline";
-
-const inputClass =
-  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 const CATEGORY_LABELS: Record<string, string> = {
   preference: "Preference",
@@ -16,6 +16,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   task_signal: "Task signal",
   project_info: "Project info",
 };
+
+const categoryItems = MEMORY_CATEGORIES.map((value) => ({
+  value,
+  label: CATEGORY_LABELS[value],
+}));
 
 export function CreateMemoryForm() {
   const { showCreateForm, setShowCreateForm, upsertMemory, setSelectedId, projectId } =
@@ -70,12 +75,12 @@ export function CreateMemoryForm() {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-xl border border-border bg-card p-5 shadow-sm"
+    <Card
+      padding="lg"
+      className="w-full animate-in fade-in slide-in-from-top-2 duration-200 sm:w-[420px]"
     >
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-heading text-lg font-semibold">Add memory</h2>
+        <CardTitle>Add memory</CardTitle>
         <Button
           type="button"
           variant="ghost"
@@ -86,59 +91,45 @@ export function CreateMemoryForm() {
         </Button>
       </div>
 
-      <div className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Title</span>
-          <input
-            required
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className={inputClass}
-          />
+          <span className="text-caption font-medium text-muted-foreground">Title</span>
+          <Input required value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
 
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Content</span>
-          <textarea
+          <span className="text-caption font-medium text-muted-foreground">Content</span>
+          <Textarea
             required
             rows={4}
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            className={inputClass}
           />
         </label>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
-              Category
-            </span>
-            <select
+            <span className="text-caption font-medium text-muted-foreground">Category</span>
+            <Select
+              items={categoryItems}
               value={category}
-              onChange={(event) =>
-                setCategory(event.target.value as (typeof MEMORY_CATEGORIES)[number])
+              onValueChange={(value) =>
+                setCategory(value as (typeof MEMORY_CATEGORIES)[number])
               }
-              className={inputClass}
-            >
-              {MEMORY_CATEGORIES.map((value) => (
-                <option key={value} value={value}>
-                  {CATEGORY_LABELS[value]}
-                </option>
-              ))}
-            </select>
+              aria-label="Category"
+            />
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
+            <span className="text-caption font-medium text-muted-foreground">
               Importance
             </span>
-            <input
+            <Input
               type="number"
               min={0}
               max={100}
               value={importance}
               onChange={(event) => setImportance(Number(event.target.value))}
-              className={inputClass}
             />
           </label>
         </div>
@@ -148,7 +139,7 @@ export function CreateMemoryForm() {
         <Button type="submit" disabled={submitting}>
           {submitting ? "Saving…" : "Save memory"}
         </Button>
-      </div>
-    </form>
+      </form>
+    </Card>
   );
 }

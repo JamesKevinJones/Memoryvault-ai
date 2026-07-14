@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import { Search } from "lucide-react";
 import { MEMORY_CATEGORIES } from "@/features/memory/types";
 import { useMemoryDashboard } from "@/features/memory/ui/memory-timeline";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 const CATEGORY_LABELS: Record<string, string> = {
   preference: "Preference",
@@ -12,8 +15,20 @@ const CATEGORY_LABELS: Record<string, string> = {
   project_info: "Project info",
 };
 
-const inputClass =
-  "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+const categoryItems = [
+  { value: "", label: "All categories" },
+  ...MEMORY_CATEGORIES.map((category) => ({
+    value: category,
+    label: CATEGORY_LABELS[category],
+  })),
+];
+
+const importanceItems = [
+  { value: "", label: "Any importance" },
+  { value: "25", label: "25+" },
+  { value: "50", label: "50+" },
+  { value: "75", label: "75+" },
+];
 
 export function MemoryFilters() {
   const { filters, setFilters, setDebouncedQ } = useMemoryDashboard();
@@ -26,61 +41,43 @@ export function MemoryFilters() {
   }, [filters.q, setDebouncedQ]);
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <label className="min-w-[220px] flex-1 space-y-1.5">
-        <span className="text-xs font-medium text-muted-foreground">Search</span>
-        <input
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="relative min-w-[220px] flex-1">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
           type="search"
           value={filters.q}
           onChange={(event) => setFilters({ q: event.target.value })}
           placeholder="Search title or content…"
-          className={inputClass}
+          className="pl-8"
         />
-      </label>
+      </div>
 
-      <label className="w-44 space-y-1.5">
-        <span className="text-xs font-medium text-muted-foreground">Category</span>
-        <select
+      <div className="w-44">
+        <Select
+          items={categoryItems}
           value={filters.category ?? ""}
-          onChange={(event) =>
+          onValueChange={(value) =>
             setFilters({
-              category: event.target.value
-                ? (event.target.value as (typeof MEMORY_CATEGORIES)[number])
+              category: value
+                ? (value as (typeof MEMORY_CATEGORIES)[number])
                 : undefined,
             })
           }
-          className={inputClass}
-        >
-          <option value="">All categories</option>
-          {MEMORY_CATEGORIES.map((category) => (
-            <option key={category} value={category}>
-              {CATEGORY_LABELS[category]}
-            </option>
-          ))}
-        </select>
-      </label>
+          aria-label="Filter by category"
+        />
+      </div>
 
-      <label className="w-40 space-y-1.5">
-        <span className="text-xs font-medium text-muted-foreground">
-          Min importance
-        </span>
-        <select
-          value={filters.importance ?? ""}
-          onChange={(event) =>
-            setFilters({
-              importance: event.target.value
-                ? Number(event.target.value)
-                : undefined,
-            })
+      <div className="w-40">
+        <Select
+          items={importanceItems}
+          value={filters.importance !== undefined ? String(filters.importance) : ""}
+          onValueChange={(value) =>
+            setFilters({ importance: value ? Number(value) : undefined })
           }
-          className={inputClass}
-        >
-          <option value="">Any</option>
-          <option value="25">25+</option>
-          <option value="50">50+</option>
-          <option value="75">75+</option>
-        </select>
-      </label>
+          aria-label="Filter by importance"
+        />
+      </div>
     </div>
   );
 }

@@ -14,12 +14,16 @@ type MemoryDashboardProps = {
   projectId?: string;
   title?: string;
   description?: string;
+  initialSelectedId?: string;
+  headingSize?: "display" | "title";
 };
 
 export async function MemoryDashboard({
   projectId,
   title = "Memory timeline",
   description = "Browse, filter, and manage your long-term memories.",
+  initialSelectedId,
+  headingSize = "display",
 }: MemoryDashboardProps) {
   const session = await auth();
   if (!session?.user?.id) return null;
@@ -31,12 +35,17 @@ export async function MemoryDashboard({
   });
 
   return (
-    <MemoryDashboardProvider initialItems={items} projectId={projectId}>
+    <MemoryDashboardProvider
+      initialItems={items}
+      projectId={projectId}
+      initialSelectedId={initialSelectedId}
+    >
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <PageHeader
           title={title}
           description={description}
           action={<CreateMemoryForm />}
+          size={headingSize}
         />
 
         <MemoryFilters />

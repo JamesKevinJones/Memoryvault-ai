@@ -15,6 +15,7 @@ import type { Memory } from "@/repositories/memories";
 import type { MemoryCategory } from "@/features/memory/types";
 import { MemoryCard } from "@/features/memory/ui/memory-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LayoutDashboard } from "lucide-react";
 
 export type MemoryFiltersState = {
@@ -111,12 +112,14 @@ async function fetchMemories(
 type MemoryDashboardProviderProps = {
   initialItems: Memory[];
   projectId?: string | null;
+  initialSelectedId?: string | null;
   children: ReactNode;
 };
 
 export function MemoryDashboardProvider({
   initialItems,
   projectId,
+  initialSelectedId,
   children,
 }: MemoryDashboardProviderProps) {
   const [items, setItems] = useState(initialItems);
@@ -124,7 +127,10 @@ export function MemoryDashboardProvider({
   const [filters, setFiltersState] = useState<MemoryFiltersState>({ q: "" });
   const [debouncedQ, setDebouncedQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialItems[0]?.id ?? null,
+    (initialSelectedId &&
+      initialItems.some((item) => item.id === initialSelectedId)
+      ? initialSelectedId
+      : initialItems[0]?.id) ?? null,
   );
   const [showCreateForm, setShowCreateForm] = useState(false);
   const skipInitialRefresh = useRef(true);
@@ -253,6 +259,16 @@ export function MemoryTimeline() {
     virtualizer.measure();
   }, [items.length, virtualizer]);
 
+  if (loading && items.length === 0) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-[116px] w-full rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
+
   if (!loading && items.length === 0) {
     return (
       <EmptyState
@@ -266,7 +282,10 @@ export function MemoryTimeline() {
   return (
     <div className="space-y-3">
       {loading && (
-        <p className="text-xs text-muted-foreground">Refreshing memories…</p>
+        <div className="flex items-center gap-2 px-1 text-caption text-muted-foreground">
+          <span className="size-1.5 animate-pulse rounded-full bg-primary" />
+          Refreshing memories…
+        </div>
       )}
       <div
         ref={parentRef}

@@ -1,19 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import { CheckSquare, Plus } from "lucide-react";
+import { Check, CheckSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { cn } from "@/lib/utils";
 import type { Task } from "@/repositories/tasks";
-
-const inputClass =
-  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors duration-200 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 type TasksPageClientProps = {
   initialTasks: Task[];
   projectId?: string;
 };
+
+function TaskRow({ task, onToggle }: { task: Task; onToggle: (task: Task) => void }) {
+  const done = task.status === "done";
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onToggle(task)}
+        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-muted/60"
+      >
+        <span
+          className={cn(
+            "flex size-[18px] shrink-0 items-center justify-center rounded-full border transition-colors duration-150",
+            done ? "border-primary bg-primary text-primary-foreground" : "border-border",
+          )}
+        >
+          {done && <Check className="size-3" strokeWidth={3} />}
+        </span>
+        <span
+          className={cn(
+            "text-sm text-foreground",
+            done && "text-muted-foreground line-through",
+          )}
+        >
+          {task.title}
+        </span>
+      </button>
+    </li>
+  );
+}
 
 export function TasksPageClient({
   initialTasks,
@@ -68,16 +98,12 @@ export function TasksPageClient({
         description="Follow-ups surfaced from chat and manual entry."
       />
 
-      <form
-        onSubmit={handleCreate}
-        className="flex gap-2 rounded-xl border border-border bg-card p-4"
-      >
-        <input
+      <form onSubmit={handleCreate} className="flex gap-2">
+        <Input
           required
           placeholder="Add a task…"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className={inputClass}
         />
         <Button type="submit" disabled={submitting}>
           <Plus data-icon="inline-start" />
@@ -92,41 +118,33 @@ export function TasksPageClient({
           description="Tasks from cold-path extraction or manual entry appear here."
         />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {openTasks.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-sm font-medium text-muted-foreground">Open</h2>
-              <ul className="space-y-2">
-                {openTasks.map((task) => (
-                  <li key={task.id}>
-                    <button
-                      type="button"
-                      onClick={() => toggleTask(task)}
-                      className="w-full rounded-lg border border-border bg-card px-4 py-3 text-left text-sm transition-colors duration-200 hover:bg-muted/30"
-                    >
-                      {task.title}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            <section>
+              <p className="mb-1.5 px-1 text-caption font-medium text-muted-foreground">
+                Open — {openTasks.length}
+              </p>
+              <Card padding="sm">
+                <ul>
+                  {openTasks.map((task) => (
+                    <TaskRow key={task.id} task={task} onToggle={toggleTask} />
+                  ))}
+                </ul>
+              </Card>
             </section>
           )}
           {doneTasks.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-sm font-medium text-muted-foreground">Done</h2>
-              <ul className="space-y-2">
-                {doneTasks.map((task) => (
-                  <li key={task.id}>
-                    <button
-                      type="button"
-                      onClick={() => toggleTask(task)}
-                      className="w-full rounded-lg border border-border bg-muted/20 px-4 py-3 text-left text-sm text-muted-foreground line-through transition-colors duration-200 hover:bg-muted/40"
-                    >
-                      {task.title}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            <section>
+              <p className="mb-1.5 px-1 text-caption font-medium text-muted-foreground">
+                Done — {doneTasks.length}
+              </p>
+              <Card padding="sm">
+                <ul>
+                  {doneTasks.map((task) => (
+                    <TaskRow key={task.id} task={task} onToggle={toggleTask} />
+                  ))}
+                </ul>
+              </Card>
             </section>
           )}
         </div>

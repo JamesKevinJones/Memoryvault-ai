@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { MessageSquare, FileText, CheckSquare } from "lucide-react";
+import { MessageSquare, FileText, CheckSquare, ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { MemoryDashboard } from "@/features/memory/ui/memory-dashboard";
 import type { Project } from "@/repositories/projects";
 import type { Task } from "@/repositories/tasks";
 import type { Document } from "@/repositories/documents";
+import { cn } from "@/lib/utils";
 
 type ProjectDetailProps = {
   project: Project;
@@ -26,7 +28,7 @@ export function ProjectDetail({
         action={
           <Link
             href={`/chat?projectId=${project.id}`}
-            className={buttonVariants({ size: "default" })}
+            className={cn(buttonVariants({ size: "default" }))}
           >
             <MessageSquare data-icon="inline-start" />
             Project chat
@@ -35,19 +37,19 @@ export function ProjectDetail({
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-card p-5">
+        <Card>
           <div className="mb-4 flex items-center gap-2">
             <CheckSquare className="size-4 text-muted-foreground" />
-            <h2 className="font-heading text-lg font-semibold">Open tasks</h2>
+            <CardTitle>Open tasks</CardTitle>
           </div>
           {tasks.length === 0 ? (
             <p className="text-sm text-muted-foreground">No open tasks.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {tasks.map((task) => (
                 <li
                   key={task.id}
-                  className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm"
+                  className="rounded-lg bg-muted/40 px-2.5 py-2 text-sm text-foreground"
                 >
                   {task.title}
                 </li>
@@ -56,28 +58,26 @@ export function ProjectDetail({
           )}
           <Link
             href={`/tasks?projectId=${project.id}`}
-            className="mt-4 inline-block text-xs text-muted-foreground hover:text-foreground"
+            className="mt-4 inline-flex items-center gap-1 text-caption text-muted-foreground transition-colors duration-150 hover:text-foreground"
           >
-            View all tasks →
+            View all tasks
+            <ArrowRight className="size-3" />
           </Link>
-        </section>
+        </Card>
 
-        <section className="rounded-xl border border-border bg-card p-5">
+        <Card>
           <div className="mb-4 flex items-center gap-2">
             <FileText className="size-4 text-muted-foreground" />
-            <h2 className="font-heading text-lg font-semibold">Documents</h2>
+            <CardTitle>Documents</CardTitle>
           </div>
           {documents.length === 0 ? (
             <p className="text-sm text-muted-foreground">No documents yet.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {documents.slice(0, 5).map((doc) => (
-                <li
-                  key={doc.id}
-                  className="rounded-lg border border-border bg-muted/20 px-3 py-2"
-                >
-                  <p className="text-sm font-medium">{doc.title}</p>
-                  <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                <li key={doc.id} className="rounded-lg bg-muted/40 px-2.5 py-2">
+                  <p className="text-sm font-medium text-foreground">{doc.title}</p>
+                  <p className="mt-0.5 line-clamp-1 text-caption text-muted-foreground">
                     {doc.body}
                   </p>
                 </li>
@@ -86,17 +86,19 @@ export function ProjectDetail({
           )}
           <Link
             href={`/documents?projectId=${project.id}`}
-            className="mt-4 inline-block text-xs text-muted-foreground hover:text-foreground"
+            className="mt-4 inline-flex items-center gap-1 text-caption text-muted-foreground transition-colors duration-150 hover:text-foreground"
           >
-            View all documents →
+            View all documents
+            <ArrowRight className="size-3" />
           </Link>
-        </section>
+        </Card>
       </div>
 
       <MemoryDashboard
         projectId={project.id}
         title="Project memories"
         description="Memories scoped to this project."
+        headingSize="title"
       />
     </div>
   );

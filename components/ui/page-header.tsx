@@ -5,6 +5,7 @@ type PageHeaderProps = {
   description?: string;
   action?: React.ReactNode;
   className?: string;
+  size?: "display" | "title";
 };
 
 export function PageHeader({
@@ -12,6 +13,7 @@ export function PageHeader({
   description,
   action,
   className,
+  size = "display",
 }: PageHeaderProps) {
   return (
     <div
@@ -20,12 +22,17 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="space-y-2">
-        <h1 className="font-heading text-4xl font-semibold tracking-tight text-foreground">
+      <div className="space-y-1.5">
+        <h1
+          className={cn(
+            "font-semibold tracking-[-0.02em] text-foreground",
+            size === "display" ? "text-display" : "text-title",
+          )}
+        >
           {title}
         </h1>
         {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-body text-muted-foreground">{description}</p>
         )}
       </div>
       {action}

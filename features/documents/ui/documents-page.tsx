@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { FileText, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Input, Textarea } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { cn } from "@/lib/utils";
 import type { Document } from "@/repositories/documents";
-
-const inputClass =
-  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors duration-200 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 type DocumentsPageClientProps = {
   initialDocuments: Document[];
@@ -69,34 +69,34 @@ export function DocumentsPageClient({
       />
 
       {showForm && (
-        <form
-          onSubmit={handleCreate}
-          className="animate-in fade-in slide-in-from-top-2 duration-200 space-y-3 rounded-xl border border-border bg-card p-5"
+        <Card
+          padding="lg"
+          className="animate-in fade-in slide-in-from-top-2 duration-200"
         >
-          <input
-            required
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className={inputClass}
-          />
-          <textarea
-            required
-            rows={6}
-            placeholder="Content"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            className={inputClass}
-          />
-          <div className="flex gap-2">
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Save document"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
-              Cancel
-            </Button>
-          </div>
-        </form>
+          <form onSubmit={handleCreate} className="space-y-3">
+            <Input
+              required
+              placeholder="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <Textarea
+              required
+              rows={6}
+              placeholder="Content"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Saving…" : "Save document"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
 
       {documents.length === 0 ? (
@@ -113,17 +113,18 @@ export function DocumentsPageClient({
         />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {documents.map((doc) => (
               <li key={doc.id}>
                 <button
                   type="button"
                   onClick={() => setSelectedId(doc.id)}
-                  className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-all duration-200 ${
+                  className={cn(
+                    "w-full truncate rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150",
                     selectedId === doc.id
-                      ? "border-foreground/30 bg-muted/40"
-                      : "border-border hover:bg-muted/20"
-                  }`}
+                      ? "bg-accent font-medium text-accent-foreground"
+                      : "text-foreground hover:bg-muted",
+                  )}
                 >
                   {doc.title}
                 </button>
@@ -131,14 +132,14 @@ export function DocumentsPageClient({
             ))}
           </ul>
           {selected && (
-            <article className="animate-in fade-in duration-200 rounded-xl border border-border bg-card p-6">
-              <h2 className="font-heading text-2xl font-semibold">
+            <Card padding="lg" className="animate-in fade-in duration-200">
+              <h2 className="text-title font-semibold text-foreground">
                 {selected.title}
               </h2>
-              <p className="mt-4 whitespace-pre-wrap text-sm text-foreground/90">
+              <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                 {selected.body}
               </p>
-            </article>
+            </Card>
           )}
         </div>
       )}
