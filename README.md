@@ -31,7 +31,8 @@ Your vault is the product. Chat is just one way in.
 | **M0 — Foundations** | ✅ Complete — Auth.js (Google), workspace 1:1, app shell, health/me/workspace APIs |
 | **M1 — Memory CRUD** | ✅ Complete — schema, repos, `/api/v1/memories`, timeline dashboard (create/browse/edit/delete) |
 | **M2 — Orchestrator + vectors** | ✅ Complete — Bedrock embed/retrieve, `/api/v1/search`, `ai_runs`, embed on memory CRUD |
-| **M3 — Chat hot path** | Planned — streaming chat, citations, cold enqueue stub |
+| **M3 — Chat hot path** | ✅ Complete — streaming `/api/v1/chat`, citations, cold enqueue stub |
+| **M4 — Cold path** | Planned — extract, upsert memories, cross-session recall |
 
 Architecture (locked): [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md](docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md)
 
@@ -85,8 +86,9 @@ cp .env.example .env
 | `AWS_REGION` | e.g. `us-east-1` (Bedrock region) |
 | `BEDROCK_EMBED_MODEL_ID` | Default `amazon.titan-embed-text-v2:0` |
 | `BEDROCK_EMBED_DIMENSIONS` | Default `1024` |
+| `BEDROCK_CHAT_MODEL_ID` | Default `amazon.nova-lite-v1:0` |
 
-AWS credentials via the default SDK chain (env vars or `~/.aws/credentials`). Enable Titan Embed in Bedrock for your region.
+AWS credentials via the default SDK chain (env vars or `~/.aws/credentials`). Enable Titan Embed and Nova Lite in Bedrock for your region.
 
 **OAuth redirect URI:** `http://localhost:3000/api/auth/callback/google`
 

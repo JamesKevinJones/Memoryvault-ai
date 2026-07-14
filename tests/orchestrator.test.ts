@@ -2,13 +2,23 @@ import { describe, expect, it } from "vitest";
 import {
   orchestratorBuildPrompt,
   orchestratorExtractMemories,
-  orchestratorGenerate,
 } from "@/ai/orchestrator";
 
-describe("orchestrator M3/M4 stubs", () => {
-  it("throws for unimplemented operations", () => {
-    expect(() => orchestratorBuildPrompt()).toThrow(/M3/);
-    expect(() => orchestratorGenerate()).toThrow(/M3/);
+describe("orchestrator", () => {
+  it("buildPrompt delegates to prompt builder", async () => {
+    const pack = await orchestratorBuildPrompt({
+      retrievedMemories: [],
+      pinnedMemories: [],
+      openTasks: [],
+      recentMessages: [],
+      userMessage: "Hello",
+    });
+
+    expect(pack.system).toContain("MemoryVault AI");
+    expect(pack.messages).toEqual([{ role: "user", content: "Hello" }]);
+  });
+
+  it("extract still throws until M4", () => {
     expect(() => orchestratorExtractMemories()).toThrow(/M4/);
   });
 });

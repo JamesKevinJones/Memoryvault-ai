@@ -193,3 +193,33 @@ export async function deleteMemory(
 
   return deleted.length > 0;
 }
+
+export async function listPinnedOrImportantMemories(input: {
+  workspaceId: string;
+  projectId?: string | null;
+  minImportance?: number;
+  limit?: number;
+}): Promise<Memory[]> {
+  const minImportance = input.minImportance ?? 70;
+  const conditions = [
+    eq(memories.workspaceId, input.workspaceId),
+    isNull(memories.archivedAt),
+    or(
+      eq(memories.pinned, true),
+      gte(memories.importance, minImportance),
+    )!,
+  ];
+
+  if (input.projectId === null) {
+    conditions.push(isNull(memories.projectId));
+  } else if (input.projectId !== undefined) {
+    conditions.push(eq(memories.projectId, input.projectId));
+  }
+
+  return db
+    .select()
+    .from(memories)
+    .where(and(...conditions))
+    .orderBy(desc(memories.importance), desc(memories.updatedAt))
+    .limit(input.limit ?? 5);
+}

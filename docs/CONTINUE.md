@@ -6,11 +6,11 @@
 
 ---
 
-## Status: M2 complete — awaiting your review
+## Status: M3 complete — awaiting your review
 
-**Report:** [docs/superpowers/reports/2026-07-14-m2-orchestrator-vectors-complete.md](superpowers/reports/2026-07-14-m2-orchestrator-vectors-complete.md)
+**Report:** [docs/superpowers/reports/2026-07-14-m3-chat-hot-path-complete.md](superpowers/reports/2026-07-14-m3-chat-hot-path-complete.md)
 
-Do **not** start M3 until you approve.
+Do **not** start M4 until you approve.
 
 ---
 
@@ -22,32 +22,30 @@ git checkout m0-foundations
 git pull
 npm install
 docker compose up -d
-docker compose exec cockroach ./cockroach sql --insecure -e "CREATE DATABASE IF NOT EXISTS memoryvault;"
 npm run db:push
 npm run dev
 ```
 
-Open http://localhost:3000 → Google sign-in → **Memory timeline** dashboard.
+Open http://localhost:3000 → sign in → **Chat** (`/chat`).
 
-`.env` is local only (never commit). `.env.example` stays placeholder-only.
-
-### M2 env additions
+### Required env
 
 ```env
 AWS_REGION=us-east-1
 BEDROCK_EMBED_MODEL_ID=amazon.titan-embed-text-v2:0
 BEDROCK_EMBED_DIMENSIONS=1024
+BEDROCK_CHAT_MODEL_ID=amazon.nova-lite-v1:0
 ```
 
-Plus AWS credentials (default SDK chain) with Bedrock Titan Embed access in your region.
+Plus AWS credentials with Bedrock Titan Embed + Nova Lite access.
 
 ---
 
-## When ready for M3
+## When ready for M4
 
 Tell Cursor:
 
-> Start M3 per architecture spec — chat hot path + streaming. Architecture locked. One milestone only; stop for review when done.
+> Start M4 per architecture spec — cold path extraction. Architecture locked. One milestone only; stop for review when done.
 
 ---
 
