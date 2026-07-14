@@ -27,6 +27,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: env().AUTH_GOOGLE_ID,
       clientSecret: env().AUTH_GOOGLE_SECRET,
+      // Explicit endpoints skip OIDC discovery. Google's discovery advertises
+      // authorization_response_iss_parameter_supported, but callbacks sometimes
+      // omit `iss`, which makes oauth4webapi throw CallbackRouteError.
+      authorization: {
+        url: "https://accounts.google.com/o/oauth2/v2/auth",
+        params: {
+          scope: "openid email profile",
+          prompt: "select_account",
+        },
+      },
+      token: "https://oauth2.googleapis.com/token",
+      userinfo: "https://openidconnect.googleapis.com/v1/userinfo",
+      issuer: "https://accounts.google.com",
     }),
   ],
   session: { strategy: "jwt" },
@@ -34,6 +47,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user?.id) {
+        // #region agent log
+        console.error(
+          JSON.stringify({
+            debugSessionId: "602de8",
+            runId: "post-fix",
+            hypothesisId: "C",
+            message: "jwt_callback_user",
+            hasUserId: Boolean(user.id),
+          }),
+        );
+        // #endregion
         token.sub = user.id;
         const ws = await ensureWorkspace(user.id);
         token.workspaceId = ws.workspaceId;
