@@ -1,22 +1,22 @@
 # Continue here (pause checkpoint)
 
-**Branch:** `m0-foundations` (tracks `origin/m0-foundations`)  
-**Repo:** https://github.com/JamesKevinJones/Memoryvault-ai  
+**Branch:** `main` (deploy branch) / `m0-foundations` (dev history)
+**Repo:** https://github.com/JamesKevinJones/Memoryvault-ai
+**Live demo:** https://memoryvault-ai-delta.vercel.app
 
 ---
 
-## Status: M5 + M6 complete — awaiting your review
+## Status: ALL MILESTONES COMPLETE (M0–M7)
 
-**Reports:**
-- [M5](superpowers/reports/2026-07-14-m5-projects-tasks-docs-complete.md)
-- [M6](superpowers/reports/2026-07-14-m6-polish-complete.md)
+**Reports:** see `superpowers/reports/` — latest: [M7 deploy](superpowers/reports/2026-07-14-m7-deploy-complete.md)
 
 **Demo script:** [docs/DEMO.md](../DEMO.md)
 
-Do **not** start M7 until you approve.
-
 ---
 
-## When ready for M7
+## Outstanding (owner actions)
 
-> Start M7 per architecture spec — deploy to AWS. Architecture locked. One milestone only; stop for review when done.
+1. Add Google OAuth redirect URI in Google Cloud Console:
+   `https://memoryvault-ai-delta.vercel.app/api/auth/callback/google`
+2. (Optional) Add `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` to Vercel env to enable Bedrock chat + semantic search in prod.
+3. (Optional) Connect the GitHub repo in the Vercel dashboard for auto-deploys from `main`.

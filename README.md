@@ -6,6 +6,8 @@
 
 Built for the **CockroachDB × AWS Agentic Memory Hackathon**.
 
+**Live demo:** https://memoryvault-ai-delta.vercel.app
+
 **Author:** [Jameskevinjones](https://github.com/Jameskevinjones)
 
 ---
@@ -35,7 +37,7 @@ Your vault is the product. Chat is just one way in.
 | **M4 — Cold path** | ✅ Complete — extract, dedupe, upsert memories/links/tasks, panel refresh |
 | **M5 — Projects/tasks/docs** | ✅ Complete — scoped memory, project chat, CRUD UIs |
 | **M6 — Polish** | ✅ Complete — empty states, motion, demo script |
-| **M7 — Deploy** | Planned — Docker on AWS, prod CRDB + Bedrock |
+| **M7 — Deploy** | ✅ Complete — Vercel app + CockroachDB on Railway, [live demo](https://memoryvault-ai-delta.vercel.app) |
 
 Architecture (locked): [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md](docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md)
 
