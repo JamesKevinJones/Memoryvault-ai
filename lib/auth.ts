@@ -47,17 +47,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user?.id) {
-        // #region agent log
-        console.error(
-          JSON.stringify({
-            debugSessionId: "602de8",
-            runId: "post-fix",
-            hypothesisId: "C",
-            message: "jwt_callback_user",
-            hasUserId: Boolean(user.id),
-          }),
-        );
-        // #endregion
         token.sub = user.id;
         const ws = await ensureWorkspace(user.id);
         token.workspaceId = ws.workspaceId;

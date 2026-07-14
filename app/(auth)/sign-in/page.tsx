@@ -45,36 +45,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
     (authError && AUTH_ERROR_HINTS[authError]) ||
     (authError ? `Sign-in failed (${authError}). Try again or check Google OAuth settings.` : null);
 
-  // #region agent log
-  if (authError) {
-    fetch("http://127.0.0.1:7424/ingest/895eb080-adbb-425e-934a-f5fa10d587fb", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "602de8",
-      },
-      body: JSON.stringify({
-        sessionId: "602de8",
-        runId: "login-debug",
-        hypothesisId: "A",
-        location: "app/(auth)/sign-in/page.tsx:render",
-        message: "sign-in page rendered with auth error",
-        data: { authError, callbackUrlHost: new URL(callbackUrl).host },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    console.error(
-      JSON.stringify({
-        debugSessionId: "602de8",
-        hypothesisId: "A",
-        message: "sign-in_auth_error",
-        authError,
-        callbackUrl,
-      }),
-    );
-  }
-  // #endregion
-
   return (
     <main className="min-h-screen grid place-items-center bg-background px-6">
       <div className="w-full max-w-sm space-y-8">
@@ -120,16 +90,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <form
           action={async () => {
             "use server";
-            // #region agent log
-            console.error(
-              JSON.stringify({
-                debugSessionId: "602de8",
-                hypothesisId: "B",
-                message: "signIn_google_invoked",
-                callbackUrl: authCallbackUrl(),
-              }),
-            );
-            // #endregion
             await signIn("google", { redirectTo: "/dashboard" });
           }}
         >
