@@ -29,8 +29,8 @@ Your vault is the product. Chat is just one way in.
 | Milestone | Status |
 |-----------|--------|
 | **M0 — Foundations** | ✅ Complete — Auth.js (Google), workspace 1:1, app shell, health/me/workspace APIs |
-| **M1 — Memory CRUD** | 🟡 In progress — schema, repos, `/api/v1/memories` done; timeline UI checkpointed (resume via [CONTINUE.md](docs/CONTINUE.md)) |
-| M2–M7 | Planned — Bedrock orchestrator, chat hot/cold path, projects, polish, deploy |
+| **M1 — Memory CRUD** | ✅ Complete — schema, repos, `/api/v1/memories`, timeline dashboard (create/browse/edit/delete) |
+| **M2 — Orchestrator + vectors** | Planned — Bedrock embed/retrieve, semantic search |
 
 Architecture (locked): [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md](docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md)
 
@@ -109,6 +109,7 @@ curl http://localhost:3000/api/v1/health
 | `npm run dev` | Dev server (Turbopack) |
 | `npm run build` | Production build |
 | `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript (`tsc --noEmit`) |
 | `npm test` | Vitest |
 | `npm run db:push` | Push Drizzle schema |
 | `npm run db:studio` | Drizzle Studio |
@@ -120,6 +121,16 @@ curl http://localhost:3000/api/v1/health
 Feature-first Clean Architecture: `features/*` · `repositories/` · `db/` · `ai/` (Orchestrator coming in M2) · thin `app/` shell.
 
 APIs live under `/api/v1/*` (Auth.js at `/api/auth/[...nextauth]`).
+
+### Memory CRUD (M1)
+
+After sign-in, open **Dashboard** (`/dashboard`):
+
+- **Add memory** — title, content, category, importance
+- **Filter** — keyword search, category, minimum importance
+- **Detail panel** — view, edit, pin, delete
+
+API: `GET/POST /api/v1/memories`, `GET/PATCH/DELETE /api/v1/memories/:id`, `GET .../related`
 
 ---
 
