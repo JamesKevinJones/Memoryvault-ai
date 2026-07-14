@@ -27,3 +27,27 @@ export async function listOpenTasks(input: {
     .orderBy(desc(tasks.updatedAt))
     .limit(input.limit ?? 5);
 }
+
+export async function createTask(input: {
+  workspaceId: string;
+  projectId?: string | null;
+  title: string;
+  memoryId?: string | null;
+}): Promise<Task> {
+  const now = new Date();
+  const [row] = await db
+    .insert(tasks)
+    .values({
+      id: crypto.randomUUID(),
+      workspaceId: input.workspaceId,
+      projectId: input.projectId ?? null,
+      title: input.title,
+      status: "open",
+      memoryId: input.memoryId ?? null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning();
+
+  return row;
+}

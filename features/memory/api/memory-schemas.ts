@@ -6,6 +6,7 @@ export const listMemoriesQuerySchema = z.object({
   category: z.enum(MEMORY_CATEGORIES).optional(),
   importance: z.coerce.number().int().min(0).max(100).optional(),
   q: z.string().optional(),
+  sourceConversationId: z.string().uuid().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });

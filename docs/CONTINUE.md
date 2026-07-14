@@ -6,11 +6,11 @@
 
 ---
 
-## Status: M3 complete — awaiting your review
+## Status: M4 complete — awaiting your review
 
-**Report:** [docs/superpowers/reports/2026-07-14-m3-chat-hot-path-complete.md](superpowers/reports/2026-07-14-m3-chat-hot-path-complete.md)
+**Report:** [docs/superpowers/reports/2026-07-14-m4-cold-path-complete.md](superpowers/reports/2026-07-14-m4-cold-path-complete.md)
 
-Do **not** start M4 until you approve.
+Do **not** start M5 until you approve.
 
 ---
 
@@ -28,24 +28,13 @@ npm run dev
 
 Open http://localhost:3000 → sign in → **Chat** (`/chat`).
 
-### Required env
-
-```env
-AWS_REGION=us-east-1
-BEDROCK_EMBED_MODEL_ID=amazon.titan-embed-text-v2:0
-BEDROCK_EMBED_DIMENSIONS=1024
-BEDROCK_CHAT_MODEL_ID=amazon.nova-lite-v1:0
-```
-
-Plus AWS credentials with Bedrock Titan Embed + Nova Lite access.
-
 ---
 
-## When ready for M4
+## When ready for M5
 
 Tell Cursor:
 
-> Start M4 per architecture spec — cold path extraction. Architecture locked. One milestone only; stop for review when done.
+> Start M5 per architecture spec — projects/tasks/docs scoped memory. Architecture locked. One milestone only; stop for review when done.
 
 ---
 

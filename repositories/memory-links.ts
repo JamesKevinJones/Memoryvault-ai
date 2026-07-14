@@ -43,3 +43,34 @@ export async function listRelated(
 
   return result;
 }
+
+export async function upsertMemoryLink(input: {
+  fromMemoryId: string;
+  toMemoryId: string;
+  relationType?: string;
+}) {
+  if (input.fromMemoryId === input.toMemoryId) return;
+
+  const relationType = input.relationType ?? "related";
+  const existing = await db
+    .select({ id: memoryLinks.id })
+    .from(memoryLinks)
+    .where(
+      and(
+        eq(memoryLinks.fromMemoryId, input.fromMemoryId),
+        eq(memoryLinks.toMemoryId, input.toMemoryId),
+        eq(memoryLinks.relationType, relationType),
+      ),
+    )
+    .limit(1);
+
+  if (existing[0]) return;
+
+  await db.insert(memoryLinks).values({
+    id: crypto.randomUUID(),
+    fromMemoryId: input.fromMemoryId,
+    toMemoryId: input.toMemoryId,
+    relationType,
+    strength: 1,
+  });
+}

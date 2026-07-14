@@ -82,3 +82,13 @@ export async function listRecentMessages(
 
   return rows.reverse();
 }
+
+export async function getMessageById(id: string): Promise<Message | null> {
+  const [row] = await db
+    .select()
+    .from(messages)
+    .where(eq(messages.id, id))
+    .limit(1);
+
+  return row ?? null;
+}

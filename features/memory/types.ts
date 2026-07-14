@@ -15,6 +15,7 @@ export type MemoryListFilters = {
   minImportance?: number;
   pinned?: boolean;
   q?: string;
+  sourceConversationId?: string;
   cursor?: string;
   limit?: number;
 };
@@ -28,6 +29,8 @@ export type CreateMemoryInput = {
   summary?: string | null;
   importance?: number;
   pinned?: boolean;
+  sourceConversationId?: string | null;
+  sourceMessageId?: string | null;
 };
 
 export type UpdateMemoryInput = Partial<{

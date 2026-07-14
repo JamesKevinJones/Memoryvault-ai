@@ -1,11 +1,12 @@
 import type {
   ChatPromptPack,
   EmbedResult,
+  ExtractResult,
   RetrieveResult,
   RetrieveScope,
 } from "@/ai/types";
 import { invokeEmbedding } from "@/ai/bedrock/embeddings";
-import { streamConverse } from "@/ai/bedrock/generate";
+import { invokeConverse, streamConverse } from "@/ai/bedrock/generate";
 import {
   BEDROCK_CHAT_MODEL_ID,
   BEDROCK_EMBED_DIMENSIONS,
@@ -15,6 +16,10 @@ import {
   buildChatPrompt,
   type BuildChatPromptInput,
 } from "@/ai/prompts/chat";
+import {
+  buildExtractionPrompt,
+  parseExtractionResult,
+} from "@/ai/prompts/extract";
 import { recordAiRun } from "@/repositories/ai-runs";
 import { searchMemoriesByVector, upsertMemoryEmbedding } from "@/repositories/embeddings";
 
@@ -76,8 +81,10 @@ async function timed<T>(
 export async function orchestratorEmbed(
   ctx: OrchestratorContext,
   text: string,
+  options?: { path?: "hot" | "cold" },
 ): Promise<EmbedResult> {
-  return timed("embed", "hot", ctx, async () => {
+  const path = options?.path ?? "hot";
+  return timed("embed", path, ctx, async () => {
     const vector = await invokeEmbedding(text);
     return {
       vector,
@@ -114,8 +121,9 @@ export async function orchestratorEmbedMemory(
   ctx: OrchestratorContext,
   memoryId: string,
   text: string,
+  options?: { path?: "hot" | "cold" },
 ): Promise<void> {
-  const embedded = await orchestratorEmbed(ctx, text);
+  const embedded = await orchestratorEmbed(ctx, text, options);
   await upsertMemoryEmbedding({
     memoryId,
     modelId: embedded.modelId,
@@ -183,7 +191,23 @@ export async function* orchestratorGenerate(
   }
 }
 
-/** M4: memory extraction */
-export function orchestratorExtractMemories(): never {
-  throw new Error("orchestratorExtractMemories is not implemented until M4");
+/** M4: memory extraction from a chat turn */
+export async function orchestratorExtractMemories(
+  ctx: OrchestratorContext,
+  input: {
+    userMessage: string;
+    assistantMessage: string;
+  },
+): Promise<ExtractResult> {
+  return timed(
+    "extract",
+    "cold",
+    ctx,
+    async () => {
+      const prompt = buildExtractionPrompt(input);
+      const raw = await invokeConverse(prompt);
+      return parseExtractionResult(raw);
+    },
+    () => ({ modelId: BEDROCK_CHAT_MODEL_ID }),
+  );
 }

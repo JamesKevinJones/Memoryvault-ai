@@ -62,12 +62,14 @@ export async function handleListMemories(
   const parsed = parseListMemoriesQuery(searchParams);
   if (!parsed.ok) return validationError();
 
-  const { projectId, category, importance, q, cursor, limit } = parsed.data;
+  const { projectId, category, importance, q, sourceConversationId, cursor, limit } =
+    parsed.data;
   const result = await listMemoriesUseCase(workspaceId, {
     projectId: projectId === "global" ? null : projectId,
     category,
     minImportance: importance,
     q,
+    sourceConversationId,
     cursor,
     limit,
   });

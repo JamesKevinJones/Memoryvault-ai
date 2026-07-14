@@ -1,11 +1,41 @@
 import {
   BedrockRuntimeClient,
+  ConverseCommand,
   ConverseStreamCommand,
   type ConverseStreamOutput,
 } from "@aws-sdk/client-bedrock-runtime";
 import { BEDROCK_CHAT_MODEL_ID } from "@/ai/config";
 import type { ChatPromptMessage } from "@/ai/types";
 import { getBedrockClient } from "@/ai/bedrock/embeddings";
+
+export async function invokeConverse(input: {
+  system: string;
+  messages: ChatPromptMessage[];
+}): Promise<string> {
+  const bedrock: BedrockRuntimeClient = getBedrockClient();
+
+  const response = await bedrock.send(
+    new ConverseCommand({
+      modelId: BEDROCK_CHAT_MODEL_ID,
+      system: [{ text: input.system }],
+      messages: input.messages.map((message) => ({
+        role: message.role,
+        content: [{ text: message.content }],
+      })),
+      inferenceConfig: {
+        maxTokens: 2048,
+        temperature: 0.2,
+      },
+    }),
+  );
+
+  const text = response.output?.message?.content?.[0]?.text;
+  if (!text?.trim()) {
+    throw new Error("Bedrock returned empty response");
+  }
+
+  return text;
+}
 
 export async function* streamConverse(input: {
   system: string;

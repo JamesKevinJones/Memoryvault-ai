@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import type { OrchestratorContext } from "@/ai/orchestrator";
-import { recordAiRun } from "@/repositories/ai-runs";
+import { runColdExtraction } from "@/features/chat/use-cases/run-cold-extraction";
 
 export type ColdExtractionJob = {
   conversationId: string;
@@ -13,19 +13,10 @@ export function enqueueColdExtraction(
   job: ColdExtractionJob,
 ) {
   after(async () => {
-    await recordAiRun({
-      workspaceId: ctx.workspaceId,
-      userId: ctx.userId,
-      conversationId: ctx.conversationId ?? job.conversationId,
-      projectId: ctx.projectId ?? null,
-      path: "cold",
-      operation: "extract",
-      modelId: null,
-      latencyMs: 0,
-      retrievalCount: null,
-      cacheHit: null,
-      status: "enqueued",
-      error: "M4 cold extraction not implemented",
-    });
+    try {
+      await runColdExtraction(ctx, job);
+    } catch {
+      // Errors are recorded via orchestrator timed wrappers where applicable.
+    }
   });
 }

@@ -46,7 +46,38 @@ export function ChatWorkspace() {
   const [citations, setCitations] = useState<ChatCitation[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [extractedMemories, setExtractedMemories] = useState<
+    Array<{ id: string; title: string; content: string; category: string }>
+  >([]);
+  const [pollingExtraction, setPollingExtraction] = useState(false);
   const assistantIdRef = useRef<string | null>(null);
+
+  async function pollExtractedMemories(activeConversationId: string) {
+    setPollingExtraction(true);
+    try {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const res = await fetch(
+          `/api/v1/memories?sourceConversationId=${activeConversationId}&limit=20`,
+        );
+        if (!res.ok) continue;
+        const data = (await res.json()) as {
+          items: Array<{
+            id: string;
+            title: string;
+            content: string;
+            category: string;
+          }>;
+        };
+        if (data.items.length > 0) {
+          setExtractedMemories(data.items);
+          return;
+        }
+      }
+    } finally {
+      setPollingExtraction(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -90,6 +121,7 @@ export function ChatWorkspace() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let activeConversationId = conversationId;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -115,6 +147,7 @@ export function ChatWorkspace() {
 
           if (sse.event === "metadata") {
             if (typeof payload.conversationId === "string") {
+              activeConversationId = payload.conversationId;
               setConversationId(payload.conversationId);
             }
             if (Array.isArray(payload.citations)) {
@@ -138,6 +171,10 @@ export function ChatWorkspace() {
             );
           }
         }
+      }
+
+      if (activeConversationId) {
+        void pollExtractedMemories(activeConversationId);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chat failed");
@@ -234,6 +271,36 @@ export function ChatWorkspace() {
                       relevance {(citation.score * 100).toFixed(0)}%
                     </p>
                   )}
+                </li>
+              ))
+            )}
+          </ul>
+
+          <h3 className="mt-8 font-heading text-sm font-semibold text-foreground">
+            Distilled from chat
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Memories extracted after the cold path runs.
+          </p>
+          <ul className="mt-3 space-y-3">
+            {extractedMemories.length === 0 ? (
+              <li className="text-sm text-muted-foreground">
+                {pollingExtraction
+                  ? "Extracting memories…"
+                  : "No extracted memories yet."}
+              </li>
+            ) : (
+              extractedMemories.map((memory) => (
+                <li
+                  key={memory.id}
+                  className="rounded-lg border border-border bg-muted/20 px-3 py-2"
+                >
+                  <p className="text-sm font-medium text-foreground">
+                    {memory.title}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                    {memory.content}
+                  </p>
                 </li>
               ))
             )}

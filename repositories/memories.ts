@@ -37,6 +37,7 @@ export type ResolvedMemoryListFilters = {
   minImportance?: number;
   pinned?: boolean;
   keywordPattern?: string;
+  sourceConversationId?: string;
   cursorDate?: Date;
   limit: number;
 };
@@ -60,6 +61,7 @@ export function resolveMemoryListFilters(
     minImportance: filters.minImportance,
     pinned: filters.pinned,
     keywordPattern: keyword ? `%${keyword}%` : undefined,
+    sourceConversationId: filters.sourceConversationId,
     cursorDate: parseMemoryListCursor(filters.cursor),
     limit,
   };
@@ -98,6 +100,12 @@ export function buildMemoryListConditions(
         ilike(memories.title, resolved.keywordPattern),
         ilike(memories.content, resolved.keywordPattern),
       )!,
+    );
+  }
+
+  if (resolved.sourceConversationId) {
+    conditions.push(
+      eq(memories.sourceConversationId, resolved.sourceConversationId),
     );
   }
 
@@ -160,6 +168,8 @@ export async function createMemory(input: CreateMemoryInput): Promise<Memory> {
       summary: input.summary ?? null,
       importance: input.importance ?? 0,
       pinned: input.pinned ?? false,
+      sourceConversationId: input.sourceConversationId ?? null,
+      sourceMessageId: input.sourceMessageId ?? null,
       createdAt: now,
       updatedAt: now,
     })

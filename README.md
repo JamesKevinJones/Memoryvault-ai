@@ -32,7 +32,8 @@ Your vault is the product. Chat is just one way in.
 | **M1 — Memory CRUD** | ✅ Complete — schema, repos, `/api/v1/memories`, timeline dashboard (create/browse/edit/delete) |
 | **M2 — Orchestrator + vectors** | ✅ Complete — Bedrock embed/retrieve, `/api/v1/search`, `ai_runs`, embed on memory CRUD |
 | **M3 — Chat hot path** | ✅ Complete — streaming `/api/v1/chat`, citations, cold enqueue stub |
-| **M4 — Cold path** | Planned — extract, upsert memories, cross-session recall |
+| **M4 — Cold path** | ✅ Complete — extract, dedupe, upsert memories/links/tasks, panel refresh |
+| **M5 — Projects/tasks/docs** | Planned — scoped memory + follow-ups |
 
 Architecture (locked): [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md](docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md)
 
@@ -138,7 +139,23 @@ After sign-in, open **Dashboard** (`/dashboard`):
 - **Filter** — semantic search when typing a query; category/importance for browse mode
 - **Detail panel** — view, edit, pin, delete
 
-API: `GET/POST /api/v1/memories`, `GET/PATCH/DELETE /api/v1/memories/:id`, `GET .../related`, `GET|POST /api/v1/search`, `GET /api/v1/ops/metrics`
+API: `GET/POST /api/v1/memories`, `GET/PATCH/DELETE /api/v1/memories/:id`, `GET .../related`, `GET|POST /api/v1/search`, `POST /api/v1/chat`, `GET /api/v1/ops/metrics`
+
+### Chat (M3)
+
+Open **Chat** (`/chat`):
+
+- **Streamed responses** — Bedrock Nova Lite with memory retrieval
+- **Citations panel** — sources from semantic + pinned memories
+- **Cold path stub** — extraction enqueued after each turn (M4 implements full extraction)
+
+### Cold path (M4)
+
+After each chat turn:
+
+- **Async extraction** — Bedrock distills durable memories + tasks from the conversation
+- **Dedupe/merge** — similar memories merged via vector similarity
+- **Panel refresh** — **Distilled from chat** updates automatically after cold path completes
 
 ---
 

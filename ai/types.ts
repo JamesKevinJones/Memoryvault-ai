@@ -51,3 +51,20 @@ export type GenerateResult = {
   text: string;
   modelId: string;
 };
+
+export type ExtractedMemoryCandidate = {
+  title: string;
+  content: string;
+  category: string;
+  importance: number;
+  relatedTitles?: string[];
+};
+
+export type ExtractedTaskCandidate = {
+  title: string;
+};
+
+export type ExtractResult = {
+  memories: ExtractedMemoryCandidate[];
+  tasks: ExtractedTaskCandidate[];
+};
