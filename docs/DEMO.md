@@ -1,13 +1,15 @@
 # MemoryVault AI — Demo Script
 
 **Duration:** ~5 minutes  
-**Prereqs:** Docker + CockroachDB running, `.env` configured, Bedrock access enabled
+**Live demo:** https://memoryvault-ai-delta.vercel.app  
+**Prereqs (local):** Docker + CockroachDB running, `.env` configured, Bedrock access enabled  
+**Prereqs (live):** Open the URL above and sign in with Google (add AWS Bedrock keys in Vercel for chat/search)
 
 ---
 
 ## 1. Sign in (30s)
 
-1. Open http://localhost:3000
+1. Open https://memoryvault-ai-delta.vercel.app (or http://localhost:3000 locally)
 2. Sign in with Google
 3. Land on **Dashboard** — empty or seeded memories
 
