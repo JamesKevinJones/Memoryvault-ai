@@ -18,7 +18,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function CreateMemoryForm() {
-  const { showCreateForm, setShowCreateForm, upsertMemory, setSelectedId } =
+  const { showCreateForm, setShowCreateForm, upsertMemory, setSelectedId, projectId } =
     useMemoryDashboard();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -45,7 +45,13 @@ export function CreateMemoryForm() {
       const res = await fetch("/api/v1/memories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content, category, importance }),
+        body: JSON.stringify({
+          title,
+          content,
+          category,
+          importance,
+          ...(projectId ? { projectId } : {}),
+        }),
       });
       if (!res.ok) throw new Error("Failed to create memory");
       const data = (await res.json()) as { memory: Parameters<typeof upsertMemory>[0] };

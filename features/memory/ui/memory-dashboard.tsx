@@ -8,28 +8,36 @@ import {
   MemoryDashboardProvider,
   MemoryTimeline,
 } from "@/features/memory/ui/memory-timeline";
+import { PageHeader } from "@/components/ui/page-header";
 
-export async function MemoryDashboard() {
+type MemoryDashboardProps = {
+  projectId?: string;
+  title?: string;
+  description?: string;
+};
+
+export async function MemoryDashboard({
+  projectId,
+  title = "Memory timeline",
+  description = "Browse, filter, and manage your long-term memories.",
+}: MemoryDashboardProps) {
   const session = await auth();
   if (!session?.user?.id) return null;
 
   const { workspaceId } = await ensureWorkspace(session.user.id);
-  const { items } = await listMemoriesUseCase(workspaceId, { limit: 50 });
+  const { items } = await listMemoriesUseCase(workspaceId, {
+    projectId,
+    limit: 50,
+  });
 
   return (
-    <MemoryDashboardProvider initialItems={items}>
+    <MemoryDashboardProvider initialItems={items} projectId={projectId}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="font-heading text-4xl font-semibold tracking-tight text-foreground">
-              Memory timeline
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Browse, filter, and manage your long-term memories.
-            </p>
-          </div>
-          <CreateMemoryForm />
-        </div>
+        <PageHeader
+          title={title}
+          description={description}
+          action={<CreateMemoryForm />}
+        />
 
         <MemoryFilters />
 

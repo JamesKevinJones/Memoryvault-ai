@@ -29,7 +29,7 @@ export function MemoryCard({ memory, selected, onSelect }: MemoryCardProps) {
       type="button"
       onClick={() => onSelect(memory)}
       className={cn(
-        "w-full rounded-xl border bg-card p-4 text-left transition-colors",
+        "w-full rounded-xl border bg-card p-4 text-left transition-all duration-200",
         selected
           ? "border-foreground/30 ring-1 ring-foreground/10"
           : "border-border hover:border-foreground/20 hover:bg-muted/30",

@@ -1,12 +1,23 @@
-export default function DocumentsPage() {
+import { auth } from "@/lib/auth";
+import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { DocumentsPageClient } from "@/features/documents/ui/documents-page";
+import { listDocuments } from "@/repositories/documents";
+
+type DocumentsPageProps = {
+  searchParams: Promise<{ projectId?: string }>;
+};
+
+export default async function DocumentsPage({
+  searchParams,
+}: DocumentsPageProps) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const { projectId } = await searchParams;
+  const { workspaceId } = await ensureWorkspace(session.user.id);
+  const items = await listDocuments({ workspaceId, projectId, limit: 50 });
+
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
-        Documents
-      </h1>
-      <p className="text-muted-foreground">
-        Available in a later milestone.
-      </p>
-    </div>
+    <DocumentsPageClient initialDocuments={items} projectId={projectId} />
   );
 }

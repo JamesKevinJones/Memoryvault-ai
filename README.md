@@ -33,7 +33,9 @@ Your vault is the product. Chat is just one way in.
 | **M2 — Orchestrator + vectors** | ✅ Complete — Bedrock embed/retrieve, `/api/v1/search`, `ai_runs`, embed on memory CRUD |
 | **M3 — Chat hot path** | ✅ Complete — streaming `/api/v1/chat`, citations, cold enqueue stub |
 | **M4 — Cold path** | ✅ Complete — extract, dedupe, upsert memories/links/tasks, panel refresh |
-| **M5 — Projects/tasks/docs** | Planned — scoped memory + follow-ups |
+| **M5 — Projects/tasks/docs** | ✅ Complete — scoped memory, project chat, CRUD UIs |
+| **M6 — Polish** | ✅ Complete — empty states, motion, demo script |
+| **M7 — Deploy** | Planned — Docker on AWS, prod CRDB + Bedrock |
 
 Architecture (locked): [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md](docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md)
 
@@ -149,7 +151,12 @@ Open **Chat** (`/chat`):
 - **Citations panel** — sources from semantic + pinned memories
 - **Cold path stub** — extraction enqueued after each turn (M4 implements full extraction)
 
-### Cold path (M4)
+### Projects, tasks, documents (M5)
+
+- **Projects** (`/projects`) — create, browse, detail with scoped memory + chat CTA
+- **Tasks** (`/tasks`) — create, toggle open/done
+- **Documents** (`/documents`) — create, browse, view
+- **Project chat** — `/chat?projectId=…` scopes retrieval to project memories
 
 After each chat turn:
 

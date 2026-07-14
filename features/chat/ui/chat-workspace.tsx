@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 
 export type ChatCitation = {
   memoryId: string;
@@ -39,7 +41,7 @@ function parseSseChunk(buffer: string): {
   return { events, rest: parts[parts.length - 1] ?? "" };
 }
 
-export function ChatWorkspace() {
+export function ChatWorkspace({ projectId }: { projectId?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -106,6 +108,7 @@ export function ChatWorkspace() {
         body: JSON.stringify({
           message,
           ...(conversationId ? { conversationId } : {}),
+          ...(projectId ? { projectId } : {}),
         }),
       });
 
@@ -189,14 +192,14 @@ export function ChatWorkspace() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <div className="space-y-2">
-        <h1 className="font-heading text-4xl font-semibold tracking-tight text-foreground">
-          Chat
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Hot-path chat with memory retrieval and source citations.
-        </p>
-      </div>
+      <PageHeader
+        title="Chat"
+        description={
+          projectId
+            ? "Project-scoped chat with memory retrieval and citations."
+            : "Hot-path chat with memory retrieval and source citations."
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="flex min-h-[60vh] flex-col rounded-xl border border-border bg-card">

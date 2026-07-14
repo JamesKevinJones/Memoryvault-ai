@@ -5,13 +5,20 @@ import {
   parseListMemoriesQuery,
   updateMemoryBodySchema,
 } from "@/features/memory/api/memory-schemas";
-import { createMemoryUseCase } from "@/features/memory/use-cases/create-memory";
 import { deleteMemoryUseCase } from "@/features/memory/use-cases/delete-memory";
 import { getMemoryUseCase } from "@/features/memory/use-cases/get-memory";
 import { listMemoriesUseCase } from "@/features/memory/use-cases/list-memories";
 import { listRelatedMemoriesUseCase } from "@/features/memory/use-cases/list-related-memories";
 import { updateMemoryUseCase } from "@/features/memory/use-cases/update-memory";
 import { embedMemoryForUser } from "@/features/memory/use-cases/embed-memory";
+import {
+  completePendingEmbedEvent,
+  scheduleEmbedOutboxDispatch,
+} from "@/features/memory/use-cases/enqueue-embed-retry";
+import {
+  createMemoryWithEmbedEvent,
+  updateMemoryWithEmbedEvent,
+} from "@/features/memory/use-cases/persist-memory-with-embed-event";
 
 export {
   createMemoryBodySchema,
@@ -53,6 +60,31 @@ function notFound(): HandlerResult {
   return { ok: false, status: 404, body: { error: "not found" } };
 }
 
+async function tryInlineEmbed(input: {
+  workspaceId: string;
+  userId: string;
+  memoryId: string;
+  title: string;
+  content: string;
+  projectId: string | null;
+  jobId: string;
+}) {
+  try {
+    await embedMemoryForUser({
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      memoryId: input.memoryId,
+      title: input.title,
+      content: input.content,
+      projectId: input.projectId,
+    });
+    await completePendingEmbedEvent(input.jobId);
+  } catch {
+    // Event already durable in embedding_outbox; dispatcher retries later.
+    scheduleEmbedOutboxDispatch();
+  }
+}
+
 export async function handleListMemories(
   searchParams: URLSearchParams,
 ): Promise<HandlerResult> {
@@ -84,23 +116,24 @@ export async function handleCreateMemory(body: unknown): Promise<HandlerResult> 
   const parsed = createMemoryBodySchema.safeParse(body);
   if (!parsed.success) return validationError();
 
-  const memory = await createMemoryUseCase({
-    workspaceId: ctx.workspaceId,
-    ...parsed.data,
+  const { memory, job } = await createMemoryWithEmbedEvent({
+    userId: ctx.userId,
+    memory: {
+      workspaceId: ctx.workspaceId,
+      ...parsed.data,
+    },
+    operation: "create",
   });
 
-  try {
-    await embedMemoryForUser({
-      workspaceId: ctx.workspaceId,
-      userId: ctx.userId,
-      memoryId: memory.id,
-      title: memory.title,
-      content: memory.content,
-      projectId: memory.projectId,
-    });
-  } catch {
-    // Memory saved; embedding failure recorded via ai_runs in orchestrator.
-  }
+  await tryInlineEmbed({
+    workspaceId: ctx.workspaceId,
+    userId: ctx.userId,
+    memoryId: memory.id,
+    title: memory.title,
+    content: memory.content,
+    projectId: memory.projectId,
+    jobId: job.id,
+  });
 
   return { ok: true, status: 201, body: { memory } };
 }
@@ -133,23 +166,33 @@ export async function handleUpdateMemory(
       : {}),
   };
 
+  const needsReembed =
+    fields.title !== undefined || fields.content !== undefined;
+
+  if (needsReembed) {
+    const result = await updateMemoryWithEmbedEvent({
+      workspaceId: ctx.workspaceId,
+      userId: ctx.userId,
+      memoryId: id,
+      patch,
+    });
+    if (!result) return notFound();
+
+    await tryInlineEmbed({
+      workspaceId: ctx.workspaceId,
+      userId: ctx.userId,
+      memoryId: result.memory.id,
+      title: result.memory.title,
+      content: result.memory.content,
+      projectId: result.memory.projectId,
+      jobId: result.job.id,
+    });
+
+    return { ok: true, status: 200, body: { memory: result.memory } };
+  }
+
   const memory = await updateMemoryUseCase(ctx.workspaceId, id, patch);
   if (!memory) return notFound();
-
-  if (fields.title !== undefined || fields.content !== undefined) {
-    try {
-      await embedMemoryForUser({
-        workspaceId: ctx.workspaceId,
-        userId: ctx.userId,
-        memoryId: memory.id,
-        title: memory.title,
-        content: memory.content,
-        projectId: memory.projectId,
-      });
-    } catch {
-      // Memory updated; embedding may be stale until retry.
-    }
-  }
 
   return { ok: true, status: 200, body: { memory } };
 }

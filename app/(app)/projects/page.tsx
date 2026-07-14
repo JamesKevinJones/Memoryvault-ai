@@ -1,12 +1,14 @@
-export default function ProjectsPage() {
-  return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
-        Projects
-      </h1>
-      <p className="text-muted-foreground">
-        Available in a later milestone.
-      </p>
-    </div>
-  );
+import { auth } from "@/lib/auth";
+import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { ProjectsList } from "@/features/projects/ui/projects-list";
+import { listProjects } from "@/repositories/projects";
+
+export default async function ProjectsPage() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const { workspaceId } = await ensureWorkspace(session.user.id);
+  const items = await listProjects(workspaceId);
+
+  return <ProjectsList initialProjects={items} />;
 }

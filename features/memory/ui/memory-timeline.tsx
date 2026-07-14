@@ -14,6 +14,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import type { Memory } from "@/repositories/memories";
 import type { MemoryCategory } from "@/features/memory/types";
 import { MemoryCard } from "@/features/memory/ui/memory-card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LayoutDashboard } from "lucide-react";
 
 export type MemoryFiltersState = {
   q: string;
@@ -34,6 +36,7 @@ type MemoryDashboardContextValue = {
   selectedId: string | null;
   selectedMemory: Memory | null;
   showCreateForm: boolean;
+  projectId?: string | null;
   setFilters: (patch: Partial<MemoryFiltersState>) => void;
   setDebouncedQ: (q: string) => void;
   setSelectedId: (id: string | null) => void;
@@ -48,10 +51,12 @@ const MemoryDashboardContext =
 
 async function fetchMemories(
   filters: MemoryFiltersState,
+  projectId?: string | null,
 ): Promise<MemoryListResponse> {
   if (filters.q.trim()) {
     const params = new URLSearchParams({ q: filters.q.trim(), limit: "50" });
     if (filters.category) params.set("category", filters.category);
+    if (projectId) params.set("projectId", projectId);
     const res = await fetch(`/api/v1/search?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to search memories");
     const data = (await res.json()) as {
@@ -95,6 +100,7 @@ async function fetchMemories(
   if (filters.importance !== undefined) {
     params.set("importance", String(filters.importance));
   }
+  if (projectId) params.set("projectId", projectId);
   params.set("limit", "50");
 
   const res = await fetch(`/api/v1/memories?${params.toString()}`);
@@ -104,11 +110,13 @@ async function fetchMemories(
 
 type MemoryDashboardProviderProps = {
   initialItems: Memory[];
+  projectId?: string | null;
   children: ReactNode;
 };
 
 export function MemoryDashboardProvider({
   initialItems,
+  projectId,
   children,
 }: MemoryDashboardProviderProps) {
   const [items, setItems] = useState(initialItems);
@@ -129,7 +137,7 @@ export function MemoryDashboardProvider({
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await fetchMemories(effectiveFilters);
+      const result = await fetchMemories(effectiveFilters, projectId);
       setItems(result.items);
       setSelectedId((current) => {
         if (current && result.items.some((item) => item.id === current)) {
@@ -140,7 +148,7 @@ export function MemoryDashboardProvider({
     } finally {
       setLoading(false);
     }
-  }, [effectiveFilters]);
+  }, [effectiveFilters, projectId]);
 
   useEffect(() => {
     if (skipInitialRefresh.current) {
@@ -188,6 +196,7 @@ export function MemoryDashboardProvider({
       selectedId,
       selectedMemory,
       showCreateForm,
+      projectId,
       setFilters,
       setDebouncedQ,
       setSelectedId,
@@ -204,6 +213,7 @@ export function MemoryDashboardProvider({
       selectedId,
       selectedMemory,
       showCreateForm,
+      projectId,
       setFilters,
       refresh,
       upsertMemory,
@@ -245,14 +255,11 @@ export function MemoryTimeline() {
 
   if (!loading && items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center">
-        <h2 className="font-heading text-2xl font-semibold text-foreground">
-          No memories yet
-        </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Add your first memory to start building your vault.
-        </p>
-      </div>
+      <EmptyState
+        icon={LayoutDashboard}
+        title="No memories yet"
+        description="Add your first memory to start building your vault."
+      />
     );
   }
 

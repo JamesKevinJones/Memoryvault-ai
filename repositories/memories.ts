@@ -16,6 +16,7 @@ import type {
   MemoryListFilters,
   UpdateMemoryInput,
 } from "@/features/memory/types";
+import type { DbExecutor } from "@/repositories/embedding-outbox";
 
 export type Memory = typeof memories.$inferSelect;
 
@@ -152,11 +153,14 @@ export async function getMemoryById(
   return row ?? null;
 }
 
-export async function createMemory(input: CreateMemoryInput): Promise<Memory> {
+export async function createMemory(
+  input: CreateMemoryInput,
+  executor: DbExecutor = db,
+): Promise<Memory> {
   const now = new Date();
   const id = crypto.randomUUID();
 
-  const [row] = await db
+  const [row] = await executor
     .insert(memories)
     .values({
       id,
@@ -182,8 +186,9 @@ export async function updateMemory(
   workspaceId: string,
   id: string,
   patch: UpdateMemoryInput,
+  executor: DbExecutor = db,
 ): Promise<Memory | null> {
-  const [row] = await db
+  const [row] = await executor
     .update(memories)
     .set({ ...patch, updatedAt: new Date() })
     .where(and(eq(memories.id, id), eq(memories.workspaceId, workspaceId)))
