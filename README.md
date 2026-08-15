@@ -6,9 +6,12 @@
 
 Built for the **CockroachDB × AWS Agentic Memory Hackathon**.
 
-**Live demo:** https://memoryvault-ai-delta.vercel.app
+**[→ Live demo](https://memoryvault-ai-delta.vercel.app)**
 
-**Author:** [Jameskevinjones](https://github.com/Jameskevinjones)
+![Next.js](https://img.shields.io/badge/next.js-15-1B2632?labelColor=0B1016)
+![CockroachDB](https://img.shields.io/badge/cockroachdb-distributed%20sql-1B2632?labelColor=0B1016)
+![Bedrock](https://img.shields.io/badge/aws%20bedrock-titan%20%2B%20nova-1B2632?labelColor=0B1016)
+![Auth.js](https://img.shields.io/badge/auth.js-google%20oauth-1B2632?labelColor=0B1016)
 
 ---
 
@@ -26,20 +29,34 @@ Your vault is the product. Chat is just one way in.
 
 ---
 
-## What’s working today
+## The hot path and the cold path
 
-| Milestone | Status |
-|-----------|--------|
-| **M0 — Foundations** | ✅ Complete — Auth.js (Google), workspace 1:1, app shell, health/me/workspace APIs |
-| **M1 — Memory CRUD** | ✅ Complete — schema, repos, `/api/v1/memories`, timeline dashboard (create/browse/edit/delete) |
-| **M2 — Orchestrator + vectors** | ✅ Complete — Bedrock embed/retrieve, `/api/v1/search`, `ai_runs`, embed on memory CRUD |
-| **M3 — Chat hot path** | ✅ Complete — streaming `/api/v1/chat`, citations, cold enqueue stub |
-| **M4 — Cold path** | ✅ Complete — extract, dedupe, upsert memories/links/tasks, panel refresh |
-| **M5 — Projects/tasks/docs** | ✅ Complete — scoped memory, project chat, CRUD UIs |
-| **M6 — Polish** | ✅ Complete — empty states, motion, demo script |
-| **M7 — Deploy** | ✅ Complete — Vercel app + CockroachDB on Railway, [live demo](https://memoryvault-ai-delta.vercel.app) |
+The design decision the whole product rests on: **remembering is not done during
+the reply.**
 
-Architecture (locked): [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md](docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md)
+**Hot path** — the turn the user is waiting on. Retrieve relevant memories by
+vector similarity, put them in the prompt, stream the answer, show the citations.
+Nothing is written. It stays fast because it does no analysis.
+
+**Cold path** — after the turn, asynchronously. Bedrock distils durable facts,
+preferences and tasks out of the exchange, merges anything close to an existing
+memory by vector similarity rather than inserting a near-duplicate, and refreshes
+the panel when it lands.
+
+Doing extraction inline would put a second model call in front of every reply and
+still get it wrong, because what mattered in a conversation is often only clear
+once the conversation has moved on.
+
+## What's built
+
+- **Memory CRUD** with a timeline dashboard — create, browse, edit, delete
+- **Semantic search** over Titan embeddings, with an `ai_runs` audit trail
+- **Streaming chat** with a citations panel showing which memories were used
+- **Async extraction** with vector-similarity dedupe and merge
+- **Projects, tasks and documents**, with retrieval scoped per project
+- **Google OAuth** and a 1:1 user-to-workspace model
+
+Architecture spec: [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md](docs/superpowers/specs/2026-07-13-memoryvault-ai-design.md)
 
 ---
 
@@ -64,8 +81,8 @@ Architecture (locked): [docs/superpowers/specs/2026-07-13-memoryvault-ai-design.
 ### 1. Clone & install
 
 ```bash
-git clone https://github.com/Jameskevinjones/memoryvault-ai.git
-cd memoryvault-ai
+git clone https://github.com/JamesKevinJones/Memoryvault-ai.git
+cd Memoryvault-ai
 npm install
 ```
 
@@ -135,7 +152,7 @@ Feature-first Clean Architecture: `features/*` · `repositories/` · `db/` · `a
 
 APIs live under `/api/v1/*` (Auth.js at `/api/auth/[...nextauth]`).
 
-### Memory + search (M1 + M2)
+### Memory and search
 
 After sign-in, open **Dashboard** (`/dashboard`):
 
@@ -145,15 +162,15 @@ After sign-in, open **Dashboard** (`/dashboard`):
 
 API: `GET/POST /api/v1/memories`, `GET/PATCH/DELETE /api/v1/memories/:id`, `GET .../related`, `GET|POST /api/v1/search`, `POST /api/v1/chat`, `GET /api/v1/ops/metrics`
 
-### Chat (M3)
+### Chat
 
 Open **Chat** (`/chat`):
 
 - **Streamed responses** — Bedrock Nova Lite with memory retrieval
 - **Citations panel** — sources from semantic + pinned memories
-- **Cold path stub** — extraction enqueued after each turn (M4 implements full extraction)
+- **Cold path** — extraction enqueued after each turn, applied asynchronously
 
-### Projects, tasks, documents (M5)
+### Projects, tasks and documents
 
 - **Projects** (`/projects`) — create, browse, detail with scoped memory + chat CTA
 - **Tasks** (`/tasks`) — create, toggle open/done
@@ -168,12 +185,12 @@ After each chat turn:
 
 ---
 
-## Picking up later
+## Elsewhere
 
-If you paused mid-milestone, start here: **[docs/CONTINUE.md](docs/CONTINUE.md)** — exact branch, last commits, and next task.
-
----
+Part of [my portfolio](https://portfolio-website-eight-kappa-iwtiz3w2ef.vercel.app),
+which introduces each project by the thing it refuses to do. This one refuses to
+call the scrollback buffer memory.
 
 ## License
 
-Private / hackathon project · © Jameskevinjones
+© James Kevin Jones. Built for the CockroachDB × AWS Agentic Memory Hackathon.
