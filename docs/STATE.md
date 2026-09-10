@@ -47,7 +47,8 @@ demo being stale and with its `DATABASE_URL` never having been updated.
 
 This branch did briefly add a *second*, separate failure of its own: an
 every-10-minutes cron, which Hobby rejects at deploy time. That one is fixed
-(139b2ed).
+(139b2ed), and a cron target that only exported POST when Vercel Cron sends
+GET (fd5935a).
 
 The remaining failure could not be diagnosed from here — reading the build
 log needs a Vercel account login. `npm run build` succeeds locally both
@@ -59,10 +60,28 @@ to the Vercel project's own environment or settings. To get the reason:
 npx vercel inspect dpl_AJqG4hzb1ds6oxNtwHWQWvoap7j4 --logs
 ```
 
-One thing to check while in there: `lib/env.ts` validates at import time, and
-Zod `.default()` applies only to an *absent* key, not an empty one. A
-Bedrock or AWS variable present-but-blank in the Vercel project would now
-fail the build where it previously fell through to a `??` default.
+**The likeliest cause, and it is a two-minute check.** Vercel scopes
+environment variables per environment — Production, Preview, Development —
+and a PR builds as *Preview*. `db/client.ts` calls `env()` at module import,
+so `next build` evaluates the schema and throws on a missing required
+variable; that is exactly how this build failed locally until a `.env`
+existed. If `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID` and
+`AUTH_GOOGLE_SECRET` are set only for Production, then **every** preview
+deployment fails at build while Production succeeds — which matches exactly
+what the check history shows: `main` green, every PR/branch build red.
+
+In the Vercel dashboard: Settings → Environment Variables, confirm each of
+those four is ticked for Preview, not just Production.
+
+Second candidate, same file: Zod `.default()` applies only to an *absent*
+key, never an empty one. A Bedrock or AWS variable present-but-blank would
+now fail the build where it previously fell through to a `??` default.
+
+Worth fixing properly either way: a production build should not require
+runtime secrets. Making `db/client.ts` construct its client lazily on first
+query would remove this whole class of build failure. Deliberately not done
+on this branch — it is a real change to import-time behaviour, and doing it
+speculatively against a failure I could not observe was the wrong trade.
 
 ## Next step
 
