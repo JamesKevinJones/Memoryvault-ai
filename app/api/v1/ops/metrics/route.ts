@@ -1,14 +1,12 @@
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireWorkspaceId } from "@/lib/session";
 import { getRecentAiRunMetrics } from "@/repositories/ai-runs";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const workspaceId = await requireWorkspaceId();
+  if (!workspaceId) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const { workspaceId } = await ensureWorkspace(session.user.id);
   const metrics = await getRecentAiRunMetrics(workspaceId);
 
   return Response.json({

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { MEMORY_CATEGORIES } from "@/features/memory/types";
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireAuth } from "@/lib/session";
 import { semanticSearchUseCase } from "@/features/search/use-cases/semantic-search";
 
 export const searchQuerySchema = z.object({
@@ -33,12 +32,10 @@ type HandlerResult =
 export async function handleSemanticSearch(
   input: z.infer<typeof searchQuerySchema>,
 ): Promise<HandlerResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const ctx = await requireAuth();
+  if (!ctx) {
     return { ok: false, status: 401, body: { error: "unauthorized" } };
   }
-
-  const { workspaceId } = await ensureWorkspace(session.user.id);
   const projectId =
     input.projectId === "global"
       ? null
@@ -47,8 +44,8 @@ export async function handleSemanticSearch(
         : input.projectId;
 
   const result = await semanticSearchUseCase({
-    workspaceId,
-    userId: session.user.id,
+    workspaceId: ctx.workspaceId,
+    userId: ctx.userId,
     query: input.q,
     projectId,
     category: input.category,

@@ -80,7 +80,7 @@ describe("processEmbedOutboxJob", () => {
     });
     vi.mocked(embedMemoryForUser).mockResolvedValue(undefined);
 
-    const result = await processEmbedOutboxJob("job-1");
+    const result = await processEmbedOutboxJob("job-1", { workspaceId: "ws-1" });
 
     expect(result).toEqual({ ok: true });
     expect(embedMemoryForUser).toHaveBeenCalledWith({
@@ -127,7 +127,7 @@ describe("processEmbedOutboxJob", () => {
     });
     vi.mocked(getMemoryById).mockResolvedValue(null);
 
-    const result = await processEmbedOutboxJob("job-1");
+    const result = await processEmbedOutboxJob("job-1", { workspaceId: "ws-1" });
 
     expect(result).toEqual({ ok: false, reason: "memory_missing" });
     expect(embedMemoryForUser).not.toHaveBeenCalled();
@@ -151,7 +151,7 @@ describe("processEmbedOutboxJob", () => {
 
     vi.mocked(claimEmbedOutboxJob).mockResolvedValue(null as never);
 
-    const result = await processEmbedOutboxJob("job-1");
+    const result = await processEmbedOutboxJob("job-1", { workspaceId: "ws-1" });
 
     expect(result).toEqual({ ok: false, reason: "claim_failed" });
     expect(embedMemoryForUser).not.toHaveBeenCalled();

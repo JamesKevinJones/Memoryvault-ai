@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireAuth } from "@/lib/session";
 import { chatBodySchema } from "@/features/chat/api/chat-schemas";
 import {
   finalizeChatTurn,
@@ -16,8 +15,8 @@ function encodeSse(event: string, data: unknown): Uint8Array {
 }
 
 export async function handleChatStream(body: unknown): Promise<HandlerResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const ctx = await requireAuth();
+  if (!ctx) {
     return { ok: false, status: 401, body: { error: "unauthorized" } };
   }
 
@@ -26,7 +25,6 @@ export async function handleChatStream(body: unknown): Promise<HandlerResult> {
     return { ok: false, status: 400, body: { error: "validation failed" } };
   }
 
-  const { workspaceId } = await ensureWorkspace(session.user.id);
   const projectId =
     parsed.data.projectId === "global"
       ? null
@@ -37,8 +35,8 @@ export async function handleChatStream(body: unknown): Promise<HandlerResult> {
   let prepared;
   try {
     prepared = await prepareChatTurn({
-      workspaceId,
-      userId: session.user.id,
+      workspaceId: ctx.workspaceId,
+      userId: ctx.userId,
       message: parsed.data.message,
       conversationId: parsed.data.conversationId,
       projectId,

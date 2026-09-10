@@ -1,15 +1,13 @@
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireAuth } from "@/lib/session";
 
 export async function getMe() {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const ws = await ensureWorkspace(session.user.id);
+  const ctx = await requireAuth();
+  if (!ctx) return null;
   return {
-    id: session.user.id,
-    name: session.user.name ?? null,
-    email: session.user.email ?? null,
-    image: session.user.image ?? null,
-    workspaceId: ws.workspaceId,
+    id: ctx.userId,
+    name: ctx.user.name ?? null,
+    email: ctx.user.email ?? null,
+    image: ctx.user.image ?? null,
+    workspaceId: ctx.workspaceId,
   };
 }

@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireWorkspaceId } from "@/lib/session";
 import {
   createProjectBodySchema,
   updateProjectBodySchema,
@@ -15,13 +14,6 @@ import {
 type HandlerResult =
   | { ok: true; status: number; body: unknown }
   | { ok: false; status: number; body: { error: string } };
-
-async function requireWorkspaceId(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const { workspaceId } = await ensureWorkspace(session.user.id);
-  return workspaceId;
-}
 
 export async function handleListProjects(): Promise<HandlerResult> {
   const workspaceId = await requireWorkspaceId();

@@ -7,6 +7,20 @@ import {
 
 export type DbExecutor = Pick<typeof db, "insert" | "update" | "select">;
 
+/**
+ * Which tenants a dispatcher may touch. Deliberately a required, explicit
+ * argument rather than an optional filter: an unscoped sweep of this table is
+ * only ever correct for the trusted cron path, so widening has to be written
+ * out at the call site instead of happening by omission.
+ */
+export type OutboxScope = { workspaceId: string } | { allWorkspaces: true };
+
+function outboxScopeCondition(scope: OutboxScope) {
+  return "allWorkspaces" in scope
+    ? undefined
+    : eq(embeddingOutbox.workspaceId, scope.workspaceId);
+}
+
 export type EnqueueEmbedOutboxInput = {
   workspaceId: string;
   userId: string;
@@ -80,7 +94,10 @@ export async function getEmbedOutboxJob(id: string) {
   return row ?? null;
 }
 
-export async function listClaimableEmbedOutboxJobs(limit = 10) {
+export async function listClaimableEmbedOutboxJobs(
+  scope: OutboxScope,
+  limit = 10,
+) {
   const now = new Date();
   return db
     .select()
@@ -92,6 +109,7 @@ export async function listClaimableEmbedOutboxJobs(limit = 10) {
           isNull(embeddingOutbox.nextAttemptAt),
           lte(embeddingOutbox.nextAttemptAt, now),
         ),
+        outboxScopeCondition(scope),
       ),
     )
     .orderBy(asc(embeddingOutbox.nextAttemptAt), asc(embeddingOutbox.createdAt))
@@ -99,7 +117,7 @@ export async function listClaimableEmbedOutboxJobs(limit = 10) {
 }
 
 /** Atomically claim a pending job for processing. Returns null if claim fails. */
-export async function claimEmbedOutboxJob(id: string) {
+export async function claimEmbedOutboxJob(id: string, scope: OutboxScope) {
   const claimToken = crypto.randomUUID();
   const now = new Date();
   const [row] = await db
@@ -119,6 +137,7 @@ export async function claimEmbedOutboxJob(id: string) {
           isNull(embeddingOutbox.nextAttemptAt),
           lte(embeddingOutbox.nextAttemptAt, now),
         ),
+        outboxScopeCondition(scope),
       ),
     )
     .returning();

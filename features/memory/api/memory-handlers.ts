@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireAuth, requireWorkspaceId } from "@/lib/session";
 import {
   createMemoryBodySchema,
   parseListMemoriesQuery,
@@ -30,23 +29,6 @@ export {
 type HandlerResult =
   | { ok: true; status: number; body: unknown }
   | { ok: false; status: number; body: { error: string } };
-
-async function requireWorkspaceId(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const { workspaceId } = await ensureWorkspace(session.user.id);
-  return workspaceId;
-}
-
-async function requireSession(): Promise<{
-  userId: string;
-  workspaceId: string;
-} | null> {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const { workspaceId } = await ensureWorkspace(session.user.id);
-  return { userId: session.user.id, workspaceId };
-}
 
 function validationError(): HandlerResult {
   return { ok: false, status: 400, body: { error: "validation failed" } };
@@ -81,7 +63,7 @@ async function tryInlineEmbed(input: {
     await completePendingEmbedEvent(input.jobId);
   } catch {
     // Event already durable in embedding_outbox; dispatcher retries later.
-    scheduleEmbedOutboxDispatch();
+    scheduleEmbedOutboxDispatch({ workspaceId: input.workspaceId });
   }
 }
 
@@ -110,7 +92,7 @@ export async function handleListMemories(
 }
 
 export async function handleCreateMemory(body: unknown): Promise<HandlerResult> {
-  const ctx = await requireSession();
+  const ctx = await requireAuth();
   if (!ctx) return unauthorized();
 
   const parsed = createMemoryBodySchema.safeParse(body);
@@ -152,7 +134,7 @@ export async function handleUpdateMemory(
   id: string,
   body: unknown,
 ): Promise<HandlerResult> {
-  const ctx = await requireSession();
+  const ctx = await requireAuth();
   if (!ctx) return unauthorized();
 
   const parsed = updateMemoryBodySchema.safeParse(body);
