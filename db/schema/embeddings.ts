@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { vector } from "drizzle-orm/pg-core";
 import { memories } from "./memories";
 

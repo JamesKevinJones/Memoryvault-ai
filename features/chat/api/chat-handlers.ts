@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/session";
+import { describeError, logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isProjectInWorkspace } from "@/features/projects/use-cases/verify-project-access";
 import { chatBodySchema } from "@/features/chat/api/chat-schemas";
@@ -93,7 +94,11 @@ export async function handleChatStream(body: unknown): Promise<HandlerResult> {
           }),
         );
         controller.enqueue(encodeSse("done", {}));
-      } catch {
+      } catch (err) {
+        logger.error("chat stream failed mid-generation", {
+          conversationId: prepared.conversationId,
+          error: describeError(err),
+        });
         controller.enqueue(
           encodeSse("error", { error: "generation failed" }),
         );

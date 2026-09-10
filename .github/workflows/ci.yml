@@ -1,0 +1,75 @@
+name: CI
+
+# The gate that was missing. 15 test files, lint and typecheck all existed and
+# none of them ran automatically, which is how a lockfile with four critical
+# advisories reached the deployed app.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build-time only. db/client.ts calls env() at import time, so page
+          # data collection needs these present — they are never used to reach
+          # a real database or a real Google project.
+          DATABASE_URL: postgresql://ci@localhost:26257/ci?sslmode=disable
+          AUTH_SECRET: ci-build-only-placeholder-secret-value
+          AUTH_GOOGLE_ID: ci-build-only-placeholder-id
+          AUTH_GOOGLE_SECRET: ci-build-only-placeholder-secret
+          AUTH_URL: http://localhost:3000
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Hard gate. Nothing critical ships, ever.
+      - name: Audit dependencies (blocking)
+        run: npm audit --audit-level=critical
+
+      # Reported, not blocking — today there is exactly one known high:
+      # postcss, reachable only through Next's build pipeline, whose fix is
+      # Next 16 (a major upgrade tracked separately). A gate that is red on
+      # day one is a gate everyone learns to ignore, so this stays visible in
+      # the log instead of pretending to be enforced. Promote it to blocking
+      # the moment that upgrade lands.
+      - name: Audit dependencies (high, advisory)
+        continue-on-error: true
+        run: npm audit --audit-level=high

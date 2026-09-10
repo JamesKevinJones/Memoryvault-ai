@@ -1,5 +1,6 @@
 import { requireAuth, requireWorkspaceId } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { describeError, logger } from "@/lib/logger";
 import { isProjectInWorkspace } from "@/features/projects/use-cases/verify-project-access";
 import {
   createMemoryBodySchema,
@@ -63,8 +64,15 @@ async function tryInlineEmbed(input: {
       projectId: input.projectId,
     });
     await completePendingEmbedEvent(input.jobId);
-  } catch {
-    // Event already durable in embedding_outbox; dispatcher retries later.
+  } catch (err) {
+    // Not fatal: the event is already durable in embedding_outbox and the
+    // dispatcher retries. Still worth a line — a persistent inline failure is
+    // how you find out Bedrock access is misconfigured.
+    logger.warn("inline embed failed, deferring to outbox", {
+      memoryId: input.memoryId,
+      workspaceId: input.workspaceId,
+      error: describeError(err),
+    });
     scheduleEmbedOutboxDispatch({ workspaceId: input.workspaceId });
   }
 }
