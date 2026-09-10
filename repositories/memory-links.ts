@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { memories, memoryLinks } from "@/db/schema";
 import type { Memory } from "@/repositories/memories";
@@ -44,12 +44,31 @@ export async function listRelated(
   return result;
 }
 
+/**
+ * Both endpoints are verified to live in the caller's workspace before a
+ * link is written. Callers currently pass ids they derived themselves, so
+ * this closes a latent hole rather than an exploited one — but a link table
+ * that accepts any two ids is exactly how one tenant's graph ends up
+ * pointing into another's.
+ */
 export async function upsertMemoryLink(input: {
+  workspaceId: string;
   fromMemoryId: string;
   toMemoryId: string;
   relationType?: string;
 }) {
   if (input.fromMemoryId === input.toMemoryId) return;
+
+  const endpoints = await db
+    .select({ id: memories.id })
+    .from(memories)
+    .where(
+      and(
+        eq(memories.workspaceId, input.workspaceId),
+        inArray(memories.id, [input.fromMemoryId, input.toMemoryId]),
+      ),
+    );
+  if (endpoints.length !== 2) return;
 
   const relationType = input.relationType ?? "related";
   const existing = await db

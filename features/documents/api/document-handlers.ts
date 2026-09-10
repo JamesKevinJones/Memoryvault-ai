@@ -1,4 +1,5 @@
 import { requireWorkspaceId } from "@/lib/session";
+import { isProjectInWorkspace } from "@/features/projects/use-cases/verify-project-access";
 import {
   createDocumentBodySchema,
   parseListDocumentsQuery,
@@ -43,6 +44,12 @@ export async function handleCreateDocument(body: unknown): Promise<HandlerResult
   const parsed = createDocumentBodySchema.safeParse(body);
   if (!parsed.success) return { ok: false, status: 400, body: { error: "validation failed" } };
 
+  // A well-formed UUID is not proof of ownership: reject a projectId that
+  // belongs to another workspace instead of storing a cross-tenant row.
+  if (!(await isProjectInWorkspace(workspaceId, parsed.data.projectId))) {
+    return { ok: false, status: 404, body: { error: "not found" } };
+  }
+
   const document = await createDocument({ workspaceId, ...parsed.data });
   return { ok: true, status: 201, body: { document } };
 }
@@ -66,6 +73,12 @@ export async function handleUpdateDocument(
 
   const parsed = updateDocumentBodySchema.safeParse(body);
   if (!parsed.success) return { ok: false, status: 400, body: { error: "validation failed" } };
+
+  // A well-formed UUID is not proof of ownership: reject a projectId that
+  // belongs to another workspace instead of storing a cross-tenant row.
+  if (!(await isProjectInWorkspace(workspaceId, parsed.data.projectId))) {
+    return { ok: false, status: 404, body: { error: "not found" } };
+  }
 
   const document = await updateDocument(workspaceId, id, parsed.data);
   if (!document) return { ok: false, status: 404, body: { error: "not found" } };

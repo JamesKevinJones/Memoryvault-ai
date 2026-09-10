@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isProjectInWorkspace } from "@/features/projects/use-cases/verify-project-access";
 import { chatBodySchema } from "@/features/chat/api/chat-schemas";
 import {
   finalizeChatTurn,
@@ -43,6 +44,13 @@ export async function handleChatStream(body: unknown): Promise<HandlerResult> {
       : parsed.data.projectId === undefined
         ? undefined
         : parsed.data.projectId;
+
+  // Scoping a conversation to another workspace's project would leak that
+  // project id into retrieval scope and into every memory the cold path
+  // then writes for this turn.
+  if (!(await isProjectInWorkspace(ctx.workspaceId, projectId))) {
+    return { ok: false, status: 404, body: { error: "not found" } };
+  }
 
   let prepared;
   try {

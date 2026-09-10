@@ -33,6 +33,7 @@ export type EnqueueEmbedOutboxInput = {
 };
 
 export async function supersedePendingEmbedJobsForMemory(
+  workspaceId: string,
   memoryId: string,
   executor: DbExecutor = db,
 ) {
@@ -49,6 +50,7 @@ export async function supersedePendingEmbedJobsForMemory(
     .where(
       and(
         eq(embeddingOutbox.memoryId, memoryId),
+        eq(embeddingOutbox.workspaceId, workspaceId),
         eq(embeddingOutbox.status, "pending"),
       ),
     );
@@ -84,11 +86,11 @@ export async function enqueueEmbedOutboxJob(
   return row;
 }
 
-export async function getEmbedOutboxJob(id: string) {
+export async function getEmbedOutboxJob(id: string, scope: OutboxScope) {
   const [row] = await db
     .select()
     .from(embeddingOutbox)
-    .where(eq(embeddingOutbox.id, id))
+    .where(and(eq(embeddingOutbox.id, id), outboxScopeCondition(scope)))
     .limit(1);
 
   return row ?? null;

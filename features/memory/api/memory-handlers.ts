@@ -1,5 +1,6 @@
 import { requireAuth, requireWorkspaceId } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isProjectInWorkspace } from "@/features/projects/use-cases/verify-project-access";
 import {
   createMemoryBodySchema,
   parseListMemoriesQuery,
@@ -105,6 +106,12 @@ export async function handleCreateMemory(body: unknown): Promise<HandlerResult> 
   const parsed = createMemoryBodySchema.safeParse(body);
   if (!parsed.success) return validationError();
 
+  // A well-formed UUID is not proof of ownership: reject a projectId that
+  // belongs to another workspace instead of storing a cross-tenant row.
+  if (!(await isProjectInWorkspace(ctx.workspaceId, parsed.data.projectId))) {
+    return notFound();
+  }
+
   const { memory, job } = await createMemoryWithEmbedEvent({
     userId: ctx.userId,
     memory: {
@@ -152,6 +159,12 @@ export async function handleUpdateMemory(
 
   const parsed = updateMemoryBodySchema.safeParse(body);
   if (!parsed.success) return validationError();
+
+  // A well-formed UUID is not proof of ownership: reject a projectId that
+  // belongs to another workspace instead of storing a cross-tenant row.
+  if (!(await isProjectInWorkspace(ctx.workspaceId, parsed.data.projectId))) {
+    return notFound();
+  }
 
   const { archived, ...fields } = parsed.data;
   const patch = {

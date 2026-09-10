@@ -82,8 +82,8 @@ export async function runColdExtraction(
   job: ColdExtractionJob,
 ) {
   const [userMessage, assistantMessage, conversation] = await Promise.all([
-    getMessageById(job.userMessageId),
-    getMessageById(job.assistantMessageId),
+    getMessageById(ctx.workspaceId, job.userMessageId),
+    getMessageById(ctx.workspaceId, job.assistantMessageId),
     getConversation(ctx.workspaceId, job.conversationId),
   ]);
 
@@ -118,7 +118,11 @@ export async function runColdExtraction(
     for (const relatedTitle of candidate.relatedTitles) {
       const toId = titleToId.get(relatedTitle.trim().toLowerCase());
       if (!toId) continue;
-      await upsertMemoryLink({ fromMemoryId: fromId, toMemoryId: toId });
+      await upsertMemoryLink({
+        workspaceId: ctx.workspaceId,
+        fromMemoryId: fromId,
+        toMemoryId: toId,
+      });
     }
   }
 

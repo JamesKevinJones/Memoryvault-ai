@@ -3,12 +3,29 @@ import { db } from "@/db/client";
 import { embeddings, memories } from "@/db/schema";
 import type { RetrievedMemory } from "@/ai/types";
 
+/**
+ * Writing a vector for a memory the caller does not own would let one
+ * tenant corrupt another's retrieval. Verified, not assumed.
+ */
 export async function upsertMemoryEmbedding(input: {
+  workspaceId: string;
   memoryId: string;
   modelId: string;
   dimensions: number;
   vector: number[];
 }) {
+  const [owned] = await db
+    .select({ id: memories.id })
+    .from(memories)
+    .where(
+      and(
+        eq(memories.id, input.memoryId),
+        eq(memories.workspaceId, input.workspaceId),
+      ),
+    )
+    .limit(1);
+  if (!owned) return;
+
   const existing = await db
     .select({ id: embeddings.id })
     .from(embeddings)

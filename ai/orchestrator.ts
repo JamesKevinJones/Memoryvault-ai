@@ -125,6 +125,7 @@ export async function orchestratorEmbedMemory(
 ): Promise<void> {
   const embedded = await orchestratorEmbed(ctx, text, options);
   await upsertMemoryEmbedding({
+    workspaceId: ctx.workspaceId,
     memoryId,
     modelId: embedded.modelId,
     dimensions: embedded.dimensions,

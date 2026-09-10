@@ -43,11 +43,13 @@ export async function createConversation(input: {
   return row;
 }
 
-export async function touchConversation(id: string) {
+export async function touchConversation(workspaceId: string, id: string) {
   await db
     .update(conversations)
     .set({ updatedAt: new Date() })
-    .where(eq(conversations.id, id));
+    .where(
+      and(eq(conversations.id, id), eq(conversations.workspaceId, workspaceId)),
+    );
 }
 
 export async function createMessage(input: {
@@ -83,12 +85,24 @@ export async function listRecentMessages(
   return rows.reverse();
 }
 
-export async function getMessageById(id: string): Promise<Message | null> {
+/**
+ * Messages carry no workspace column of their own, so tenancy is enforced by
+ * joining through the owning conversation. Reading one by bare id would be the
+ * only unscoped read left in this layer, and every such function is one
+ * careless refactor away from being an IDOR.
+ */
+export async function getMessageById(
+  workspaceId: string,
+  id: string,
+): Promise<Message | null> {
   const [row] = await db
-    .select()
+    .select({ message: messages })
     .from(messages)
-    .where(eq(messages.id, id))
+    .innerJoin(conversations, eq(messages.conversationId, conversations.id))
+    .where(
+      and(eq(messages.id, id), eq(conversations.workspaceId, workspaceId)),
+    )
     .limit(1);
 
-  return row ?? null;
+  return row?.message ?? null;
 }
