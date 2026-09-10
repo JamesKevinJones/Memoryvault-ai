@@ -5,11 +5,11 @@ import { dispatchPendingEmbedJobs } from "@/features/memory/use-cases/enqueue-em
 import { purgeExpiredRateLimits } from "@/repositories/rate-limits";
 import type { OutboxScope } from "@/repositories/embedding-outbox";
 
-export async function POST(req: Request) {
-  // The cron caller sweeps every workspace; a signed-in user only ever sweeps
-  // their own. Previously this route authenticated and then dispatched the
-  // whole table, letting any user process — and exhaust the retry budget of —
-  // every other tenant's embedding jobs.
+async function sweep(req: Request): Promise<Response> {
+  // Two callers with very different blast radii. The cron sweeps every
+  // workspace; a signed-in user only ever sweeps their own. This route used to
+  // authenticate and then dispatch the whole table, letting any user process —
+  // and exhaust the retry budget of — every other tenant's embedding jobs.
   const trustedCron = isTrustedCronRequest(req);
   let scope: OutboxScope;
 
@@ -38,4 +38,19 @@ export async function POST(req: Request) {
     results,
     ...(trustedCron ? { purgedRateLimitWindows: purged } : {}),
   });
+}
+
+/**
+ * Vercel Cron invokes its target with GET, so the scheduled sweep needs a GET
+ * handler to exist at all — a POST-only route would have been dead on arrival
+ * even once it deployed. Same gate, same scoping: without a valid CRON_SECRET
+ * this is just the caller's own workspace.
+ */
+export async function GET(req: Request) {
+  return sweep(req);
+}
+
+/** Kept for on-demand sweeps from the app. */
+export async function POST(req: Request) {
+  return sweep(req);
 }
