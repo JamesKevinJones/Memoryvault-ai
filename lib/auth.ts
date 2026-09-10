@@ -8,7 +8,7 @@ import {
   users,
   verificationTokens,
 } from "@/db/schema";
-import { env, shouldTrustHost } from "@/lib/env";
+import { shouldTrustHost } from "@/lib/env";
 import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
 
 /**
@@ -25,8 +25,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   }),
   providers: [
     Google({
-      clientId: env().AUTH_GOOGLE_ID,
-      clientSecret: env().AUTH_GOOGLE_SECRET,
+      // clientId / clientSecret are intentionally omitted: Auth.js reads
+      // AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET from the environment itself.
+      // Passing them here would validate the whole env schema at module
+      // scope, and `next build` imports this module — which is how a build
+      // ended up requiring runtime secrets.
       // Explicit endpoints skip OIDC discovery. Google's discovery advertises
       // authorization_response_iss_parameter_supported, but callbacks sometimes
       // omit `iss`, which makes oauth4webapi throw CallbackRouteError.

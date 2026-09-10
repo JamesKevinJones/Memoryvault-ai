@@ -64,3 +64,32 @@ export function shouldTrustHost(source: NodeJS.ProcessEnv = process.env): boolea
   if (source.NODE_ENV !== "production") return true;
   return Boolean(source.AUTH_URL);
 }
+
+/**
+ * The connection string alone, without dragging in the rest of the schema.
+ *
+ * `next build` imports every route module to collect page data, so module-scope
+ * code runs during the build. Validating the *whole* environment there made a
+ * build require every runtime secret — auth keys included — which turns a
+ * variable that is merely scoped to the wrong Vercel environment into a failed
+ * deployment.
+ *
+ * When DATABASE_URL is genuinely absent we hand back an unroutable placeholder
+ * rather than throwing. postgres.js connects lazily, so the build completes and
+ * the first real query fails loudly instead — a runtime error naming the real
+ * problem beats a build error that buries it.
+ */
+export function databaseUrl(): string {
+  const url = process.env.DATABASE_URL;
+  if (url && url.trim().length > 0) return url;
+
+  console.error(
+    JSON.stringify({
+      level: "error",
+      message:
+        "DATABASE_URL is not set. Using an unroutable placeholder so the build can complete; every query will fail until it is configured.",
+      at: new Date().toISOString(),
+    }),
+  );
+  return "postgresql://unset:unset@127.0.0.1:1/unset";
+}
