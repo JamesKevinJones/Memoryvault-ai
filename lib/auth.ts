@@ -8,7 +8,7 @@ import {
   users,
   verificationTokens,
 } from "@/db/schema";
-import { env } from "@/lib/env";
+import { env, shouldTrustHost } from "@/lib/env";
 import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
 
 /**
@@ -66,5 +66,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user.id) await ensureWorkspace(user.id);
     },
   },
-  trustHost: true,
+  // Only where the platform fixes the host, or AUTH_URL pins it explicitly.
+  trustHost: shouldTrustHost(),
 });
