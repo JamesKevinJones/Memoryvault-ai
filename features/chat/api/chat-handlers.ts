@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { chatBodySchema } from "@/features/chat/api/chat-schemas";
 import {
   finalizeChatTurn,
@@ -7,7 +8,7 @@ import {
 
 type HandlerResult =
   | { ok: true; stream: ReadableStream<Uint8Array> }
-  | { ok: false; status: number; body: { error: string } };
+  | { ok: false; status: number; body: { error: string }; retryAfterSeconds?: number };
 
 function encodeSse(event: string, data: unknown): Uint8Array {
   const encoder = new TextEncoder();
@@ -20,6 +21,17 @@ export async function handleChatStream(body: unknown): Promise<HandlerResult> {
     return { ok: false, status: 401, body: { error: "unauthorized" } };
   }
 
+  // A chat turn is two Bedrock calls plus an async extraction, so this is
+  // the most expensive thing an authenticated caller can loop on.
+  const rate = await checkRateLimit("chat", ctx.userId);
+  if (!rate.allowed) {
+    return {
+      ok: false,
+      status: 429,
+      body: { error: "rate limited" },
+      retryAfterSeconds: rate.retryAfterSeconds,
+    };
+  }
   const parsed = chatBodySchema.safeParse(body);
   if (!parsed.success) {
     return { ok: false, status: 400, body: { error: "validation failed" } };

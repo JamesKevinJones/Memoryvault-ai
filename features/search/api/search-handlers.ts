@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MEMORY_CATEGORIES } from "@/features/memory/types";
 import { requireAuth } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { semanticSearchUseCase } from "@/features/search/use-cases/semantic-search";
 
 export const searchQuerySchema = z.object({
@@ -36,7 +37,12 @@ export async function handleSemanticSearch(
   if (!ctx) {
     return { ok: false, status: 401, body: { error: "unauthorized" } };
   }
-  const projectId =
+
+  // Every search embeds the query, so it is a paid call per request.
+  const rate = await checkRateLimit("search", ctx.userId);
+  if (!rate.allowed) {
+    return { ok: false, status: 429, body: { error: "rate limited" } };
+  }  const projectId =
     input.projectId === "global"
       ? null
       : input.projectId === undefined

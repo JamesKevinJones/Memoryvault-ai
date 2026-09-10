@@ -1,4 +1,5 @@
 import { requireAuth, requireWorkspaceId } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createMemoryBodySchema,
   parseListMemoriesQuery,
@@ -95,6 +96,12 @@ export async function handleCreateMemory(body: unknown): Promise<HandlerResult> 
   const ctx = await requireAuth();
   if (!ctx) return unauthorized();
 
+  // Creating or re-titling a memory triggers a Bedrock embedding call.
+  const rate = await checkRateLimit("memoryWrite", ctx.userId);
+  if (!rate.allowed) {
+    return { ok: false, status: 429, body: { error: "rate limited" } };
+  }
+
   const parsed = createMemoryBodySchema.safeParse(body);
   if (!parsed.success) return validationError();
 
@@ -136,6 +143,12 @@ export async function handleUpdateMemory(
 ): Promise<HandlerResult> {
   const ctx = await requireAuth();
   if (!ctx) return unauthorized();
+
+  // Creating or re-titling a memory triggers a Bedrock embedding call.
+  const rate = await checkRateLimit("memoryWrite", ctx.userId);
+  if (!rate.allowed) {
+    return { ok: false, status: 429, body: { error: "rate limited" } };
+  }
 
   const parsed = updateMemoryBodySchema.safeParse(body);
   if (!parsed.success) return validationError();

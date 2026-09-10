@@ -2,6 +2,11 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { auth } from "@/lib/auth";
 import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
 
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(async () => ({ allowed: true })),
+  rateLimitedResponse: vi.fn(),
+}));
+
 vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
 }));

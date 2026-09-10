@@ -8,3 +8,4 @@ export * from "./tasks";
 export * from "./documents";
 export * from "./ai-runs";
 export * from "./embedding-outbox";
+export * from "./rate-limits";
