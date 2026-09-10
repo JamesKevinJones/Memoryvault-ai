@@ -2,22 +2,38 @@ import { z } from "zod";
 import { MEMORY_CATEGORIES } from "@/features/memory/types";
 import type { ExtractResult } from "@/ai/types";
 
+/**
+ * Caps are load-bearing, not cosmetic. Every extracted memory costs one
+ * Bedrock embedding call in the cold path, so an unbounded array turns a
+ * single chat turn into arbitrary spend and arbitrary rows. The model is
+ * not a trusted producer here — its output is attacker-influenceable via
+ * whatever text the user pasted into the conversation.
+ */
+const MAX_EXTRACTED_MEMORIES = 10;
+const MAX_EXTRACTED_TASKS = 10;
+const MAX_MEMORY_TITLE_CHARS = 200;
+const MAX_MEMORY_CONTENT_CHARS = 4000;
+
+/** Non-empty text, truncated to a ceiling rather than rejected at it. */
+const boundedText = (max: number) =>
+  z.string().trim().min(1).transform((value) => value.slice(0, max));
+
 const extractionSchema = z.object({
   memories: z
     .array(
       z.object({
-        title: z.string().trim().min(1),
-        content: z.string().trim().min(1),
+        title: boundedText(MAX_MEMORY_TITLE_CHARS),
+        content: boundedText(MAX_MEMORY_CONTENT_CHARS),
         category: z.enum(MEMORY_CATEGORIES),
         importance: z.number().int().min(0).max(100),
-        relatedTitles: z.array(z.string()).optional(),
+        relatedTitles: z.array(boundedText(MAX_MEMORY_TITLE_CHARS)).optional(),
       }),
     )
     .default([]),
   tasks: z
     .array(
       z.object({
-        title: z.string().trim().min(1),
+        title: boundedText(MAX_MEMORY_TITLE_CHARS),
       }),
     )
     .default([]),
@@ -65,7 +81,10 @@ export function parseExtractionResult(raw: string): ExtractResult {
     if (!parsed.success) {
       return { memories: [], tasks: [] };
     }
-    return parsed.data;
+    return {
+      memories: parsed.data.memories.slice(0, MAX_EXTRACTED_MEMORIES),
+      tasks: parsed.data.tasks.slice(0, MAX_EXTRACTED_TASKS),
+    };
   } catch {
     return { memories: [], tasks: [] };
   }
