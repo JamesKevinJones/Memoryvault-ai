@@ -36,6 +36,34 @@ Next 16 major upgrade.
 
 Nothing. The branch is complete and self-consistent.
 
+## Vercel deployments were already failing before this branch
+
+Worth stating plainly so a red check on the PR is not misread as this
+branch's doing: the base commit `9483dac` on `m0-foundations` — the tip of
+the default branch, before any change here — already carries
+`Vercel: failure`. `main` carries an older `Vercel: success`, which is
+presumably what the live URL is still serving. That is consistent with the
+demo being stale and with its `DATABASE_URL` never having been updated.
+
+This branch did briefly add a *second*, separate failure of its own: an
+every-10-minutes cron, which Hobby rejects at deploy time. That one is fixed
+(139b2ed).
+
+The remaining failure could not be diagnosed from here — reading the build
+log needs a Vercel account login. `npm run build` succeeds locally both
+normally and under a simulated `VERCEL=1 NODE_ENV=production`, and CI's
+`verify` job (lint, typecheck, 71 tests, build) is green, so it is specific
+to the Vercel project's own environment or settings. To get the reason:
+
+```
+npx vercel inspect dpl_AJqG4hzb1ds6oxNtwHWQWvoap7j4 --logs
+```
+
+One thing to check while in there: `lib/env.ts` validates at import time, and
+Zod `.default()` applies only to an *absent* key, not an empty one. A
+Bedrock or AWS variable present-but-blank in the Vercel project would now
+fail the build where it previously fell through to a `??` default.
+
 ## Next step
 
 **The live demo's database is down** — `/api/v1/health` returns
