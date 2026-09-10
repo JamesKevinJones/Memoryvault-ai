@@ -1,0 +1,65 @@
+# STATE
+
+Last updated: 2026-09-10
+
+## What this branch is
+
+`security/hardening-2026-09` — a full security and vulnerability pass over the
+repo, from an audit of the default branch plus `npm audit` on the lockfile.
+8 commits, all verified green (lint, typecheck, 71 tests, production build),
+with the CSP and cross-origin guard checked against a running dev server in a
+real browser.
+
+Findings and reasoning: [SECURITY.md](SECURITY.md).
+Full audit report: `~/.claude/plans/https-github-com-jameskevinjones-memoryv-giggly-duckling.md`.
+
+## What changed
+
+| Severity | Issue | Resolution |
+|---|---|---|
+| Critical | `next@15.5.20` — two unauthenticated RCE advisories | → 15.5.25 |
+| Critical | `next-auth@5.0.0-beta.31` — existence-based auth checks fail open (GHSA-8fpg-xm3f-6cx3) | → beta.32, plus a positive-assertion gate in `lib/session.ts` |
+| High | Any signed-in user could dispatch **every** tenant's embed jobs | required `OutboxScope`; cron path behind `CRON_SECRET` |
+| High | No rate limit on any Bedrock-backed endpoint | Postgres-backed per-user limiter |
+| High | Prompt injection via stored memories; unbounded cold-path writes | `<memory>` fencing + caps |
+| High | No security headers at all | nonce CSP + static header set in middleware |
+| Medium | `projectId` accepted without ownership check | `isProjectInWorkspace` on all write paths |
+| Medium | Six repository functions with no workspace predicate | all scoped |
+| Medium | No CSRF/Origin check on writes | 403 on foreign Origin |
+| Medium | No migrations, no CI, container ran as root, `trustHost` always on | all addressed |
+
+Lockfile: **23 vulnerabilities (4 critical, 9 high) → 6 (0 critical, 1 high)**.
+The remaining high is `postcss` inside Next's build pipeline; its fix is the
+Next 16 major upgrade.
+
+## In progress
+
+Nothing. The branch is complete and self-consistent.
+
+## Next step
+
+**The live demo's database is down** — `/api/v1/health` returns
+`{"status":"degraded","db":"down"}`, so Google sign-in cannot complete: the
+callback hits `DrizzleAdapter` and `ensureWorkspace`, throws, and surfaces to
+the user as an OAuth error rather than a database one.
+
+1. Check the Railway CockroachDB service is running and its connection string
+   still matches `DATABASE_URL` in the Vercel project; redeploy after changing.
+2. Confirm `/api/v1/health` returns `{"status":"ok","db":"up"}`.
+3. Read the migration-baseline note in [SECURITY.md](SECURITY.md) before
+   running `db:migrate` against the existing database — the baseline is a full
+   `CREATE TABLE` set and will fail against tables that already exist. Only
+   `rate_limits` is genuinely new.
+4. Set `CRON_SECRET` in Vercel so the scheduled outbox sweep can run.
+5. `gh secret set CLAUDE_API_KEY --repo JamesKevinJones/Memoryvault-ai` so
+   `security.yml` can run.
+
+## Open, not done
+
+- Next 16 upgrade, to clear the last `postcss` high and let CI's audit gate be
+  promoted from advisory to blocking.
+- Default branch is still `m0-foundations`, not `main`, and the two branches'
+  READMEs have diverged.
+- No trigram index on `memories.content`; keyword search is still a full scan.
+  Left alone deliberately — CockroachDB trigram index behaviour was not
+  verifiable without a live database.
