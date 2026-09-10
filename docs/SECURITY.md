@@ -58,6 +58,15 @@ sweep in `vercel.json` can process every workspace. Without it that door stays
 closed and signed-in users can only sweep their own workspace, which is safe but
 means dead-lettered embed jobs are never retried.
 
+**Cron cadence is capped by the plan.** `vercel.json` schedules the sweep daily
+(`0 3 * * *`) because Hobby rejects anything more frequent *at deploy time* —
+an every-10-minutes expression fails the build outright, it does not silently
+degrade. On Pro, change it to `*/10 * * * *` so the backoff ladder in
+`computeNextAttemptAt` runs at the cadence it was written for. Note this only
+affects the backstop: the inline `after()` dispatch still retries the common
+case immediately, and a signed-in user sweeping their own workspace is on
+demand.
+
 **`CLAUDE_API_KEY`** — the `security.yml` workflow needs it as a repo secret:
 
 ```
