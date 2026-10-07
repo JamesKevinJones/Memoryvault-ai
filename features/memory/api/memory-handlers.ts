@@ -1,5 +1,7 @@
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireAuth, requireWorkspaceId } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { describeError, logger } from "@/lib/logger";
+import { isProjectInWorkspace } from "@/features/projects/use-cases/verify-project-access";
 import {
   createMemoryBodySchema,
   parseListMemoriesQuery,
@@ -30,23 +32,6 @@ export {
 type HandlerResult =
   | { ok: true; status: number; body: unknown }
   | { ok: false; status: number; body: { error: string } };
-
-async function requireWorkspaceId(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const { workspaceId } = await ensureWorkspace(session.user.id);
-  return workspaceId;
-}
-
-async function requireSession(): Promise<{
-  userId: string;
-  workspaceId: string;
-} | null> {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const { workspaceId } = await ensureWorkspace(session.user.id);
-  return { userId: session.user.id, workspaceId };
-}
 
 function validationError(): HandlerResult {
   return { ok: false, status: 400, body: { error: "validation failed" } };
@@ -79,9 +64,16 @@ async function tryInlineEmbed(input: {
       projectId: input.projectId,
     });
     await completePendingEmbedEvent(input.jobId);
-  } catch {
-    // Event already durable in embedding_outbox; dispatcher retries later.
-    scheduleEmbedOutboxDispatch();
+  } catch (err) {
+    // Not fatal: the event is already durable in embedding_outbox and the
+    // dispatcher retries. Still worth a line — a persistent inline failure is
+    // how you find out Bedrock access is misconfigured.
+    logger.warn("inline embed failed, deferring to outbox", {
+      memoryId: input.memoryId,
+      workspaceId: input.workspaceId,
+      error: describeError(err),
+    });
+    scheduleEmbedOutboxDispatch({ workspaceId: input.workspaceId });
   }
 }
 
@@ -110,11 +102,23 @@ export async function handleListMemories(
 }
 
 export async function handleCreateMemory(body: unknown): Promise<HandlerResult> {
-  const ctx = await requireSession();
+  const ctx = await requireAuth();
   if (!ctx) return unauthorized();
+
+  // Creating or re-titling a memory triggers a Bedrock embedding call.
+  const rate = await checkRateLimit("memoryWrite", ctx.userId);
+  if (!rate.allowed) {
+    return { ok: false, status: 429, body: { error: "rate limited" } };
+  }
 
   const parsed = createMemoryBodySchema.safeParse(body);
   if (!parsed.success) return validationError();
+
+  // A well-formed UUID is not proof of ownership: reject a projectId that
+  // belongs to another workspace instead of storing a cross-tenant row.
+  if (!(await isProjectInWorkspace(ctx.workspaceId, parsed.data.projectId))) {
+    return notFound();
+  }
 
   const { memory, job } = await createMemoryWithEmbedEvent({
     userId: ctx.userId,
@@ -152,11 +156,23 @@ export async function handleUpdateMemory(
   id: string,
   body: unknown,
 ): Promise<HandlerResult> {
-  const ctx = await requireSession();
+  const ctx = await requireAuth();
   if (!ctx) return unauthorized();
+
+  // Creating or re-titling a memory triggers a Bedrock embedding call.
+  const rate = await checkRateLimit("memoryWrite", ctx.userId);
+  if (!rate.allowed) {
+    return { ok: false, status: 429, body: { error: "rate limited" } };
+  }
 
   const parsed = updateMemoryBodySchema.safeParse(body);
   if (!parsed.success) return validationError();
+
+  // A well-formed UUID is not proof of ownership: reject a projectId that
+  // belongs to another workspace instead of storing a cross-tenant row.
+  if (!(await isProjectInWorkspace(ctx.workspaceId, parsed.data.projectId))) {
+    return notFound();
+  }
 
   const { archived, ...fields } = parsed.data;
   const patch = {

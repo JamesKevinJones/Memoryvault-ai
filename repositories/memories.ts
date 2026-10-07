@@ -23,6 +23,16 @@ export type Memory = typeof memories.$inferSelect;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
+/**
+ * '%' and '_' are wildcards to ILIKE. Unescaped, a search for "50%" matches
+ * far more than the user asked for, and a query of just "%" scans everything.
+ * Drizzle parameterises the value, so this was never injection — it was wrong
+ * results and a needlessly expensive scan.
+ */
+export function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
 export function parseMemoryListCursor(cursor?: string): Date | undefined {
   if (!cursor) return undefined;
   const date = new Date(cursor);
@@ -61,7 +71,7 @@ export function resolveMemoryListFilters(
     category: filters.category,
     minImportance: filters.minImportance,
     pinned: filters.pinned,
-    keywordPattern: keyword ? `%${keyword}%` : undefined,
+    keywordPattern: keyword ? `%${escapeLikePattern(keyword)}%` : undefined,
     sourceConversationId: filters.sourceConversationId,
     cursorDate: parseMemoryListCursor(filters.cursor),
     limit,

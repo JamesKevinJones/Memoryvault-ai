@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "memoryvault-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "C:/Users/kj638/KEVINC~1/Memoryvault-ai"
+      ],
+      "port": 3000
+    }
+  ]
+}

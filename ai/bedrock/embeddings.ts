@@ -4,8 +4,9 @@ import {
 } from "@aws-sdk/client-bedrock-runtime";
 import {
   BEDROCK_EMBED_DIMENSIONS,
-  BEDROCK_EMBED_MODEL_ID,
+  bedrockEmbedModelId,
 } from "@/ai/config";
+import { bedrockAbort } from "@/ai/bedrock/timeouts";
 
 let client: BedrockRuntimeClient | null = null;
 
@@ -28,11 +29,12 @@ export async function invokeEmbedding(text: string): Promise<number[]> {
 
   const response = await bedrock.send(
     new InvokeModelCommand({
-      modelId: BEDROCK_EMBED_MODEL_ID,
+      modelId: bedrockEmbedModelId(),
       contentType: "application/json",
       accept: "application/json",
       body: Buffer.from(body),
     }),
+    bedrockAbort("embed"),
   );
 
   const payload = JSON.parse(

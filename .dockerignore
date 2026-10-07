@@ -1,0 +1,18 @@
+# Never let secrets or history into an image layer. The builder stage does
+# `COPY . .`, so anything not listed here is baked in permanently — deleting it
+# in a later stage does not remove it from the layer it was added in.
+.env
+.env.*
+!.env.example
+.git
+.github
+.next
+node_modules
+npm-debug.log*
+coverage
+.vercel
+.claude
+docs
+tests
+*.md
+!README.md

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveMemoryListFilters } from "@/repositories/memories";
+import {
+  escapeLikePattern,
+  resolveMemoryListFilters,
+} from "@/repositories/memories";
 
 describe("resolveMemoryListFilters", () => {
   it("defaults limit and excludes archived", () => {
@@ -68,5 +71,21 @@ describe("resolveMemoryListFilters", () => {
     expect(
       resolveMemoryListFilters({ workspaceId: "ws-1", pinned: true }).pinned,
     ).toBe(true);
+  });
+});
+
+describe("keyword search escaping", () => {
+  it("neutralises ILIKE wildcards so a query means what it says", () => {
+    expect(escapeLikePattern("50% off")).toBe("50\\% off");
+    expect(escapeLikePattern("snake_case")).toBe("snake\\_case");
+    expect(escapeLikePattern("a\\b")).toBe("a\\\\b");
+  });
+
+  it("leaves ordinary text alone", () => {
+    expect(escapeLikePattern("deploy target")).toBe("deploy target");
+  });
+
+  it("stops a lone % from matching every row", () => {
+    expect(escapeLikePattern("%")).not.toBe("%");
   });
 });

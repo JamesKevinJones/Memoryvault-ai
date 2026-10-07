@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import type { EmbedOutboxOperation } from "@/db/schema/embedding-outbox";
+import type { OutboxScope } from "@/repositories/embedding-outbox";
 import { embedMemoryForUser } from "@/features/memory/use-cases/embed-memory";
 import { getMemoryById } from "@/repositories/memories";
 import {
@@ -17,8 +18,11 @@ export function computeNextAttemptAt(attempts: number): Date {
   return new Date(Date.now() + delayMs);
 }
 
-export async function processEmbedOutboxJob(jobId: string) {
-  const claimed = await claimEmbedOutboxJob(jobId);
+export async function processEmbedOutboxJob(
+  jobId: string,
+  scope: OutboxScope,
+) {
+  const claimed = await claimEmbedOutboxJob(jobId, scope);
   if (!claimed || !claimed.claimToken) return { ok: false as const, reason: "claim_failed" };
 
   const memory = await getMemoryById(claimed.workspaceId, claimed.memoryId);
@@ -54,21 +58,24 @@ export async function processEmbedOutboxJob(jobId: string) {
   }
 }
 
-export async function dispatchPendingEmbedJobs(limit = 10) {
-  const jobs = await listClaimableEmbedOutboxJobs(limit);
+export async function dispatchPendingEmbedJobs(
+  scope: OutboxScope,
+  limit = 10,
+) {
+  const jobs = await listClaimableEmbedOutboxJobs(scope, limit);
   const results = [];
   for (const job of jobs) {
     results.push({
       jobId: job.id,
-      ...(await processEmbedOutboxJob(job.id)),
+      ...(await processEmbedOutboxJob(job.id, scope)),
     });
   }
   return results;
 }
 
-export function scheduleEmbedOutboxDispatch() {
+export function scheduleEmbedOutboxDispatch(scope: OutboxScope) {
   after(async () => {
-    await dispatchPendingEmbedJobs();
+    await dispatchPendingEmbedJobs(scope);
   });
 }
 

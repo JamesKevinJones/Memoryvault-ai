@@ -4,9 +4,10 @@ import {
   ConverseStreamCommand,
   type ConverseStreamOutput,
 } from "@aws-sdk/client-bedrock-runtime";
-import { BEDROCK_CHAT_MODEL_ID } from "@/ai/config";
+import { bedrockChatModelId } from "@/ai/config";
 import type { ChatPromptMessage } from "@/ai/types";
 import { getBedrockClient } from "@/ai/bedrock/embeddings";
+import { bedrockAbort } from "@/ai/bedrock/timeouts";
 
 export async function invokeConverse(input: {
   system: string;
@@ -16,7 +17,7 @@ export async function invokeConverse(input: {
 
   const response = await bedrock.send(
     new ConverseCommand({
-      modelId: BEDROCK_CHAT_MODEL_ID,
+      modelId: bedrockChatModelId(),
       system: [{ text: input.system }],
       messages: input.messages.map((message) => ({
         role: message.role,
@@ -27,6 +28,7 @@ export async function invokeConverse(input: {
         temperature: 0.2,
       },
     }),
+    bedrockAbort("generate"),
   );
 
   const text = response.output?.message?.content?.[0]?.text;
@@ -45,7 +47,7 @@ export async function* streamConverse(input: {
 
   const response = await bedrock.send(
     new ConverseStreamCommand({
-      modelId: BEDROCK_CHAT_MODEL_ID,
+      modelId: bedrockChatModelId(),
       system: [{ text: input.system }],
       messages: input.messages.map((message) => ({
         role: message.role,
@@ -56,6 +58,7 @@ export async function* streamConverse(input: {
         temperature: 0.4,
       },
     }),
+    bedrockAbort("generate"),
   );
 
   if (!response.stream) {

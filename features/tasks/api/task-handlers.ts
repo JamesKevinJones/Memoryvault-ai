@@ -1,5 +1,5 @@
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireWorkspaceId } from "@/lib/session";
+import { isProjectInWorkspace } from "@/features/projects/use-cases/verify-project-access";
 import {
   createTaskBodySchema,
   parseListTasksQuery,
@@ -16,13 +16,6 @@ import {
 type HandlerResult =
   | { ok: true; status: number; body: unknown }
   | { ok: false; status: number; body: { error: string } };
-
-async function requireWorkspaceId(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const { workspaceId } = await ensureWorkspace(session.user.id);
-  return workspaceId;
-}
 
 export async function handleListTasks(
   searchParams: URLSearchParams,
@@ -52,6 +45,12 @@ export async function handleCreateTask(body: unknown): Promise<HandlerResult> {
   const parsed = createTaskBodySchema.safeParse(body);
   if (!parsed.success) return { ok: false, status: 400, body: { error: "validation failed" } };
 
+  // A well-formed UUID is not proof of ownership: reject a projectId that
+  // belongs to another workspace instead of storing a cross-tenant row.
+  if (!(await isProjectInWorkspace(workspaceId, parsed.data.projectId))) {
+    return { ok: false, status: 404, body: { error: "not found" } };
+  }
+
   const task = await createTask({ workspaceId, ...parsed.data });
   return { ok: true, status: 201, body: { task } };
 }
@@ -75,6 +74,12 @@ export async function handleUpdateTask(
 
   const parsed = updateTaskBodySchema.safeParse(body);
   if (!parsed.success) return { ok: false, status: 400, body: { error: "validation failed" } };
+
+  // A well-formed UUID is not proof of ownership: reject a projectId that
+  // belongs to another workspace instead of storing a cross-tenant row.
+  if (!(await isProjectInWorkspace(workspaceId, parsed.data.projectId))) {
+    return { ok: false, status: 404, body: { error: "not found" } };
+  }
 
   const task = await updateTask(workspaceId, id, parsed.data);
   if (!task) return { ok: false, status: 404, body: { error: "not found" } };

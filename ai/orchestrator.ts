@@ -8,9 +8,9 @@ import type {
 import { invokeEmbedding } from "@/ai/bedrock/embeddings";
 import { invokeConverse, streamConverse } from "@/ai/bedrock/generate";
 import {
-  BEDROCK_CHAT_MODEL_ID,
+  bedrockChatModelId,
   BEDROCK_EMBED_DIMENSIONS,
-  BEDROCK_EMBED_MODEL_ID,
+  bedrockEmbedModelId,
 } from "@/ai/config";
 import {
   buildChatPrompt,
@@ -51,7 +51,7 @@ async function timed<T>(
       projectId: ctx.projectId ?? null,
       path,
       operation,
-      modelId: meta?.modelId ?? BEDROCK_EMBED_MODEL_ID,
+      modelId: meta?.modelId ?? bedrockEmbedModelId(),
       latencyMs: Date.now() - start,
       retrievalCount: meta?.retrievalCount ?? null,
       cacheHit: null,
@@ -67,7 +67,7 @@ async function timed<T>(
       projectId: ctx.projectId ?? null,
       path,
       operation,
-      modelId: extra ? null : BEDROCK_EMBED_MODEL_ID,
+      modelId: extra ? null : bedrockEmbedModelId(),
       latencyMs: Date.now() - start,
       retrievalCount: null,
       cacheHit: null,
@@ -88,7 +88,7 @@ export async function orchestratorEmbed(
     const vector = await invokeEmbedding(text);
     return {
       vector,
-      modelId: BEDROCK_EMBED_MODEL_ID,
+      modelId: bedrockEmbedModelId(),
       dimensions: BEDROCK_EMBED_DIMENSIONS,
     };
   });
@@ -125,6 +125,7 @@ export async function orchestratorEmbedMemory(
 ): Promise<void> {
   const embedded = await orchestratorEmbed(ctx, text, options);
   await upsertMemoryEmbedding({
+    workspaceId: ctx.workspaceId,
     memoryId,
     modelId: embedded.modelId,
     dimensions: embedded.dimensions,
@@ -161,7 +162,7 @@ export async function* orchestratorGenerate(
       projectId: ctx.projectId ?? null,
       path: "hot",
       operation: "generate",
-      modelId: BEDROCK_CHAT_MODEL_ID,
+      modelId: bedrockChatModelId(),
       latencyMs: Date.now() - start,
       retrievalCount: prompt.citations.length,
       cacheHit: null,
@@ -176,7 +177,7 @@ export async function* orchestratorGenerate(
       projectId: ctx.projectId ?? null,
       path: "hot",
       operation: "generate",
-      modelId: BEDROCK_CHAT_MODEL_ID,
+      modelId: bedrockChatModelId(),
       latencyMs: Date.now() - start,
       retrievalCount: null,
       cacheHit: null,
@@ -208,6 +209,6 @@ export async function orchestratorExtractMemories(
       const raw = await invokeConverse(prompt);
       return parseExtractionResult(raw);
     },
-    () => ({ modelId: BEDROCK_CHAT_MODEL_ID }),
+    () => ({ modelId: bedrockChatModelId() }),
   );
 }

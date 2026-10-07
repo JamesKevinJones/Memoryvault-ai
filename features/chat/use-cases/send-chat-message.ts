@@ -116,7 +116,10 @@ export async function finalizeChatTurn(input: {
     content: input.assistantText,
   });
 
-  await touchConversation(input.prepared.conversationId);
+  await touchConversation(
+    input.prepared.ctx.workspaceId,
+    input.prepared.conversationId,
+  );
 
   enqueueColdExtraction(input.prepared.ctx, {
     conversationId: input.prepared.conversationId,

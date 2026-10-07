@@ -104,11 +104,11 @@ cp .env.example .env
 | `DATABASE_URL` | `postgresql://root@localhost:26257/memoryvault?sslmode=disable` |
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google Cloud Console |
-| `AUTH_URL` | `http://localhost:3000` |
+| `AUTH_URL` | `http://localhost:3000`. Required in production unless deployed on Vercel |
 | `AWS_REGION` | e.g. `us-east-1` (Bedrock region) |
 | `BEDROCK_EMBED_MODEL_ID` | Default `amazon.titan-embed-text-v2:0` |
-| `BEDROCK_EMBED_DIMENSIONS` | Default `1024` |
 | `BEDROCK_CHAT_MODEL_ID` | Default `amazon.nova-lite-v1:0` |
+| `CRON_SECRET` | Optional, min 16 chars. Lets the scheduled sweep process every workspace |
 
 AWS credentials via the default SDK chain (env vars or `~/.aws/credentials`). Enable Titan Embed and Nova Lite in Bedrock for your region.
 
@@ -117,7 +117,7 @@ AWS credentials via the default SDK chain (env vars or `~/.aws/credentials`). En
 ### 4. Schema + run
 
 ```bash
-npm run db:push
+npm run db:migrate
 npm run dev
 ```
 
@@ -141,7 +141,8 @@ curl http://localhost:3000/api/v1/health
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript (`tsc --noEmit`) |
 | `npm test` | Vitest |
-| `npm run db:push` | Push Drizzle schema |
+| `npm run db:migrate` | Apply committed migrations |
+| `npm run db:generate` | Generate a migration from schema changes |
 | `npm run db:studio` | Drizzle Studio |
 
 ---
@@ -185,6 +186,20 @@ After each chat turn:
 
 ---
 
+## Security
+
+One workspace per user, enforced at the repository layer: no query reads or
+writes a tenant row without a workspace predicate. Retrieved memories are
+fenced as data in the prompt rather than pasted in as text, because the cold
+path writes them from whatever a conversation contained. Bedrock-backed
+endpoints are rate limited per user against a shared Postgres counter, since
+each one spends real money.
+
+Details, trust boundaries and the operational steps that are not in code:
+[docs/SECURITY.md](docs/SECURITY.md).
+
+---
+
 ## Elsewhere
 
 Part of [my portfolio](https://portfolio-website-eight-kappa-iwtiz3w2ef.vercel.app),
@@ -193,4 +208,5 @@ call the scrollback buffer memory.
 
 ## License
 
-© James Kevin Jones. Built for the CockroachDB × AWS Agentic Memory Hackathon.
+MIT — see [LICENSE](LICENSE).
+Built for the CockroachDB × AWS Agentic Memory Hackathon.

@@ -81,11 +81,17 @@ export function ChatWorkspace({ projectId }: { projectId?: string }) {
   async function pollExtractedMemories(activeConversationId: string) {
     setPollingExtraction(true);
     try {
-      for (let attempt = 0; attempt < 10; attempt += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Back off rather than hammering a fixed 2s. Most turns settle on the
+      // first or second look; the ones that don't are usually turns with
+      // nothing to extract, and those used to cost ten requests apiece.
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const delayMs = Math.min(1500 * 2 ** attempt, 12_000);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
         const res = await fetch(
           `/api/v1/memories?sourceConversationId=${activeConversationId}&limit=20`,
         );
+        // A 429 means we are the reason the budget is gone; stop asking.
+        if (res.status === 429) return;
         if (!res.ok) continue;
         const data = (await res.json()) as {
           items: Array<{

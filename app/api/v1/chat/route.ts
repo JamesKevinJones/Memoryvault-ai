@@ -10,7 +10,12 @@ export async function POST(req: Request) {
 
   const result = await handleChatStream(body);
   if (!result.ok) {
-    return Response.json(result.body, { status: result.status });
+    return Response.json(result.body, {
+      status: result.status,
+      headers: result.retryAfterSeconds
+        ? { "Retry-After": String(result.retryAfterSeconds) }
+        : undefined,
+    });
   }
 
   return new Response(result.stream, {

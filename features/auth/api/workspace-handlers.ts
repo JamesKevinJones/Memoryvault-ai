@@ -1,13 +1,11 @@
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { workspaces } from "@/db/schema";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireWorkspaceId } from "@/lib/session";
 
 export async function getWorkspace() {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const { workspaceId } = await ensureWorkspace(session.user.id);
+  const workspaceId = await requireWorkspaceId();
+  if (!workspaceId) return null;
   const [ws] = await db
     .select()
     .from(workspaces)
@@ -17,9 +15,8 @@ export async function getWorkspace() {
 }
 
 export async function updateWorkspaceName(name: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const { workspaceId } = await ensureWorkspace(session.user.id);
+  const workspaceId = await requireWorkspaceId();
+  if (!workspaceId) return null;
   const [ws] = await db
     .update(workspaces)
     .set({ name, updatedAt: new Date() })

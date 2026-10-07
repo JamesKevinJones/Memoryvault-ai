@@ -45,7 +45,7 @@ export async function updateMemoryWithEmbedEvent(input: {
     );
     if (!memory) return null;
 
-    await supersedePendingEmbedJobsForMemory(memory.id, tx);
+    await supersedePendingEmbedJobsForMemory(input.workspaceId, memory.id, tx);
     const job = await enqueueEmbedOutboxJob(
       {
         workspaceId: memory.workspaceId,

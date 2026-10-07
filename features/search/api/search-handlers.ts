@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MEMORY_CATEGORIES } from "@/features/memory/types";
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireAuth } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { semanticSearchUseCase } from "@/features/search/use-cases/semantic-search";
 
 export const searchQuerySchema = z.object({
@@ -33,13 +33,16 @@ type HandlerResult =
 export async function handleSemanticSearch(
   input: z.infer<typeof searchQuerySchema>,
 ): Promise<HandlerResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const ctx = await requireAuth();
+  if (!ctx) {
     return { ok: false, status: 401, body: { error: "unauthorized" } };
   }
 
-  const { workspaceId } = await ensureWorkspace(session.user.id);
-  const projectId =
+  // Every search embeds the query, so it is a paid call per request.
+  const rate = await checkRateLimit("search", ctx.userId);
+  if (!rate.allowed) {
+    return { ok: false, status: 429, body: { error: "rate limited" } };
+  }  const projectId =
     input.projectId === "global"
       ? null
       : input.projectId === undefined
@@ -47,8 +50,8 @@ export async function handleSemanticSearch(
         : input.projectId;
 
   const result = await semanticSearchUseCase({
-    workspaceId,
-    userId: session.user.id,
+    workspaceId: ctx.workspaceId,
+    userId: ctx.userId,
     query: input.q,
     projectId,
     category: input.category,

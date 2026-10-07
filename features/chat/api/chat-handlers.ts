@@ -1,5 +1,7 @@
-import { auth } from "@/lib/auth";
-import { ensureWorkspace } from "@/features/auth/use-cases/ensure-workspace";
+import { requireAuth } from "@/lib/session";
+import { describeError, logger } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isProjectInWorkspace } from "@/features/projects/use-cases/verify-project-access";
 import { chatBodySchema } from "@/features/chat/api/chat-schemas";
 import {
   finalizeChatTurn,
@@ -8,7 +10,7 @@ import {
 
 type HandlerResult =
   | { ok: true; stream: ReadableStream<Uint8Array> }
-  | { ok: false; status: number; body: { error: string } };
+  | { ok: false; status: number; body: { error: string }; retryAfterSeconds?: number };
 
 function encodeSse(event: string, data: unknown): Uint8Array {
   const encoder = new TextEncoder();
@@ -16,17 +18,27 @@ function encodeSse(event: string, data: unknown): Uint8Array {
 }
 
 export async function handleChatStream(body: unknown): Promise<HandlerResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const ctx = await requireAuth();
+  if (!ctx) {
     return { ok: false, status: 401, body: { error: "unauthorized" } };
   }
 
+  // A chat turn is two Bedrock calls plus an async extraction, so this is
+  // the most expensive thing an authenticated caller can loop on.
+  const rate = await checkRateLimit("chat", ctx.userId);
+  if (!rate.allowed) {
+    return {
+      ok: false,
+      status: 429,
+      body: { error: "rate limited" },
+      retryAfterSeconds: rate.retryAfterSeconds,
+    };
+  }
   const parsed = chatBodySchema.safeParse(body);
   if (!parsed.success) {
     return { ok: false, status: 400, body: { error: "validation failed" } };
   }
 
-  const { workspaceId } = await ensureWorkspace(session.user.id);
   const projectId =
     parsed.data.projectId === "global"
       ? null
@@ -34,11 +46,18 @@ export async function handleChatStream(body: unknown): Promise<HandlerResult> {
         ? undefined
         : parsed.data.projectId;
 
+  // Scoping a conversation to another workspace's project would leak that
+  // project id into retrieval scope and into every memory the cold path
+  // then writes for this turn.
+  if (!(await isProjectInWorkspace(ctx.workspaceId, projectId))) {
+    return { ok: false, status: 404, body: { error: "not found" } };
+  }
+
   let prepared;
   try {
     prepared = await prepareChatTurn({
-      workspaceId,
-      userId: session.user.id,
+      workspaceId: ctx.workspaceId,
+      userId: ctx.userId,
       message: parsed.data.message,
       conversationId: parsed.data.conversationId,
       projectId,
@@ -75,7 +94,11 @@ export async function handleChatStream(body: unknown): Promise<HandlerResult> {
           }),
         );
         controller.enqueue(encodeSse("done", {}));
-      } catch {
+      } catch (err) {
+        logger.error("chat stream failed mid-generation", {
+          conversationId: prepared.conversationId,
+          error: describeError(err),
+        });
         controller.enqueue(
           encodeSse("error", { error: "generation failed" }),
         );
